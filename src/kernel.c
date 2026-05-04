@@ -218,7 +218,7 @@ void kernel_main() {
     while (inb(0x64) & 0x01) { inb(0x60); }
 
 
-    vga_write("AliOS 4 - made by a 13yo - Multi-TTY Mode\n");
+    vga_write("AliOS 4 - made by a 12yo - Multi-TTY Mode\n");
     vga_write("System Ready. Use Ctrl+Alt+F1-F10 to switch.\n");
     vga_write("> ");
 
