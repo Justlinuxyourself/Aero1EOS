@@ -958,6 +958,7 @@ void print_disk_info(char* args) {
     vga_write("Total: "); vga_write(itoa(total_final, b_total)); vga_write(unit_label); vga_write("\n");
     vga_write("Used:  "); vga_write(itoa(used_final, b_used));   vga_write(unit_label); vga_write("\n");
     vga_write("Free:  "); vga_write(itoa(free_final, b_free));   vga_write(unit_label); vga_write("\n");
+    vga_write("(Use args: k,m,g if u want in other units)");
 }
 
 
@@ -1008,7 +1009,7 @@ void shell_init() {
     shell_register_command("read_sector", "Read Sector IDE", cmd_read_disk);
     shell_register_command("write_sector", "Write Sector IDE", cmd_write_disk);
     shell_register_command("install", "Install AliOS", cmd_install);
-    shell_register_command("sfree", "Display disk free/total storage info", print_disk_info);
+    shell_register_command("sfree", "Storage info: df [k|m|g]", print_disk_info);
 }
 
 
