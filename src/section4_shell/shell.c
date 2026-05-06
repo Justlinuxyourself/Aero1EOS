@@ -1254,6 +1254,10 @@ void cmd_format(char* args) {
         vga_write("Format aborted.\n");
     }
 }
+void cmd_ls(char* args) {
+    // alifs_list() handles the disk reading and VGA printing internally
+    alifs_list();
+}
 
 void shell_init() {
     shell_register_command("help", "List all available commands", cmd_help);
