@@ -1117,6 +1117,140 @@ void cmd_disk_speed(char* args) {
     
     vga_write("\nNote: Speeds are limited by PIO Mode overhead.\n");
 }
+void kgets_multiline(char* buffer, int max_len) {
+    int i = 0;
+    vga_write("(Press ESC to save and exit)\n> ");
+
+    while (i < max_len - 1) {
+        char c = wait_for_key();
+
+        // 27 is the ASCII/Scancode often used for ESC
+        if (c == 27) { 
+            buffer[i] = '\0';
+            vga_write("\n[Saving...]\n");
+            break;
+        } 
+        
+        else if (c == '\n') {
+            buffer[i++] = '\n';
+            vga_putchar('\n');
+            vga_write("> "); // Visual cue for new line
+        } 
+        
+        else if (c == '\b') {
+            if (i > 0) {
+                if (buffer[i-1] == '\n') {
+                    // Logic for backspacing a newline is tricky in VGA
+                    // For now, let's just prevent backspacing past a newline
+                    continue; 
+                }
+                i--;
+                vga_putchar('\b');
+            }
+        } 
+        
+        else if (c >= 32 && c <= 126) {
+            buffer[i++] = c;
+            vga_putchar(c);
+        }
+    }
+    buffer[i] = '\0';
+}
+
+void kgets(char* buffer, int max_len) {
+    int i = 0;
+    while (i < max_len - 1) {
+        char c = wait_for_key();
+
+        if (c == '\n') {
+            buffer[i] = '\0';
+            vga_putchar('\n');
+            break;
+        } else if (c == '\b') {
+            if (i > 0) {
+                i--;
+                // Standard VGA backspace: move back, print space, move back
+                vga_putchar('\b'); 
+            }
+        } else if (c >= 32 && c <= 126) { // Printable characters only
+            buffer[i++] = c;
+            vga_putchar(c);
+        }
+    }
+    buffer[i] = '\0';
+}
+void cmd_edit(char* args) {
+    char* filename = get_filename_arg(args);
+
+    if (!filename || *filename == '\0') {
+        vga_write("Usage: edit <filename>\n");
+        return;
+    }
+
+    vga_write("\n--- AliOS 4 Multiline Notebook ---\n");
+    vga_write("File: "); vga_write(filename); vga_write("\n");
+
+    static char note_content[512] __attribute__((aligned(8)));
+    for(int i = 0; i < 512; i++) note_content[i] = 0;
+
+    kgets_multiline(note_content, 511);
+
+    if (alifs_create(filename, note_content) == 0) {
+        vga_write("Note saved to AliFS.\n");
+    } else {
+        vga_write("Error: Sector write failed.\n");
+    }
+}
+
+void cmd_touch(char* args) {
+    char* filename = get_filename_arg(args);
+
+    if (!filename || *filename == '\0') {
+        vga_write("Usage: touch <filename>\n");
+        return;
+    }
+
+    if (alifs_create(filename, "") == 0) {
+        vga_write("Created empty file: ");
+        vga_write(filename);
+        vga_write("\n");
+    } else {
+        vga_write("Error: Could not create file.\n");
+    }
+}
+void cmd_touch(char* args) {
+    char* filename = get_filename_arg(args);
+
+    if (!filename || *filename == '\0') {
+        vga_write("Usage: touch <filename>\n");
+        return;
+    }
+
+    if (alifs_create(filename, "") == 0) {
+        vga_write("Created empty file: ");
+        vga_write(filename);
+        vga_write("\n");
+    } else {
+        vga_write("Error: Could not create file.\n");
+    }
+}
+void cmd_cat(char* args) {
+    char* filename = get_filename_arg(args);
+    if (!filename || *filename == '\0') {
+        vga_write("Usage: cat <filename>\n");
+        return;
+    }
+
+    char* content = alifs_read(filename); 
+
+    if (content) {
+        vga_write("\n--- "); vga_write(filename); vga_write(" ---\n");
+        vga_write(content);
+        vga_write("\n------------------\n");
+    } else {
+        vga_write("Error: File not found.\n");
+    }
+}
 
 void shell_init() {
     shell_register_command("help", "List all available commands", cmd_help);
