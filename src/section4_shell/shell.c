@@ -1237,6 +1237,23 @@ void cmd_cat(char* args) {
         vga_write("Error: File not found.\n");
     }
 }
+void cmd_format(char* args) {
+    vga_write("\n--- AliFS File System Format ---\n");
+    vga_write("WARNING: This will clear the Inode table at LBA 20001.\n");
+    vga_write("All files in the Notebook will be lost.\n");
+    vga_write("Type 'CONFIRM' to proceed: ");
+
+    char confirm[10];
+    kgets(confirm, 9);
+
+    if (strcmp(confirm, "CONFIRM") == 0) {
+        vga_write("Formatting... ");
+        alifs_format();
+        vga_write("SUCCESS.\n");
+    } else {
+        vga_write("Format aborted.\n");
+    }
+}
 
 void shell_init() {
     shell_register_command("help", "List all available commands", cmd_help);
