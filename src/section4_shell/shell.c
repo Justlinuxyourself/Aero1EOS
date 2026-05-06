@@ -1118,6 +1118,14 @@ void cmd_disk_speed(char* args) {
     
     vga_write("\nNote: Speeds are limited by PIO Mode overhead.\n");
 }
+
+char* get_filename_arg(char* args) {
+    if (args == 0 || *args == '\0') return 0;
+    while (*args == ' ') args++; // Skip leading spaces
+    if (*args == '\0') return 0;
+    return args;
+}
+
 void kgets_multiline(char* buffer, int max_len) {
     int i = 0;
     vga_write("(Press ESC to save and exit)\n> ");
