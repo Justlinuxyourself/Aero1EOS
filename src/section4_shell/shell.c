@@ -7,6 +7,7 @@ All rights reserved.
 #include "../section1_cpu/io.h"
 #include "aliscr.h"
 #include "frames.h"
+#include "../section3_io/alifs.h"
 #include <stdint.h>
 #define NOTEBOOK_YELLOW 0x1E
 #define VGA_ADDRESS 0xB8000
@@ -1202,22 +1203,7 @@ void cmd_edit(char* args) {
     }
 }
 
-void cmd_touch(char* args) {
-    char* filename = get_filename_arg(args);
 
-    if (!filename || *filename == '\0') {
-        vga_write("Usage: touch <filename>\n");
-        return;
-    }
-
-    if (alifs_create(filename, "") == 0) {
-        vga_write("Created empty file: ");
-        vga_write(filename);
-        vga_write("\n");
-    } else {
-        vga_write("Error: Could not create file.\n");
-    }
-}
 void cmd_touch(char* args) {
     char* filename = get_filename_arg(args);
 
@@ -1286,6 +1272,12 @@ void shell_init() {
     shell_register_command("dwipe", "Erase the whole disk (zero out)", cmd_disk_wipe);
     shell_register_command("dshred", "Fill the disk with random noise", cmd_disk_random);
     shell_register_command("rwsp", "R/W Disk Speed Test", cmd_disk_speed);
+    shell_register_command("lidi", "List files on AliFS", cmd_ls);   
+    shell_register_command("crfi", "Create a new empty file", cmd_touch);
+    shell_register_command("editfi", "Write text to a file", cmd_edit);
+    shell_register_command("refi", "Read file content", cmd_cat);
+    shell_register_command("fmrt","Wipe and init AliFS", cmd_format);
+
 
 }
 
