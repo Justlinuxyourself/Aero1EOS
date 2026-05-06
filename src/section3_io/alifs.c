@@ -1,5 +1,15 @@
 #include "alifs.h"
-extern void vga_write();
+
+
+extern void ide_write_sector_bytes(uint32_t lba, void* buffer);
+extern void ide_read_sector_bytes(uint32_t lba, void* buffer);
+
+extern int strcmp(const char* s1, const char* s2);
+extern char* strcpy(char* dest, const char* src);
+extern int strlen(const char* s);
+
+extern void vga_write(const char* str);
+
 
 // Static buffer to hold the Inode Table during operations
 static uint8_t inode_sector[512] __attribute__((aligned(8)));
