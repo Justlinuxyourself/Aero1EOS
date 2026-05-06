@@ -928,7 +928,7 @@ uint32_t ide_calculate_usage_FULL() {
             }
         }
 
-        // Progress indicator every 1000 sectors so you know it's alive
+        // Progress indicator every 1000 sectors so i know it's alive
         if (s % 1000 == 0) vga_putchar('.'); 
     }
     
