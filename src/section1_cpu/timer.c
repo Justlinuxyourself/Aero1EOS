@@ -44,7 +44,7 @@ void timer_wait_tick() {
 }
 
 unsigned int get_uptime_seconds() {
-    // CRITICAL: Must divide by 100 because frequency is 100Hz
+    // CRITICAL: Must divide by 200 because frequency is 200Hz
     return (unsigned int)(timer_ticks / 200); 
 }
 
@@ -68,4 +68,7 @@ void sleep_ms(int ms) {
     while (timer_ticks < target) {
         timer_wait_tick();
     }
+}
+unsigned int get_uptime_ms() {
+    return (unsigned int)(timer_ticks * 5); 
 }
