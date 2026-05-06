@@ -1048,6 +1048,75 @@ void shell_register_command(const char* name, const char* desc, command_func fun
     new_node->next = command_list;
     command_list = new_node;
 }
+void cmd_disk_speed(char* args) {
+    uint32_t total_sectors = ide_get_total_sectors();
+    
+    // We need at least 10MB of space to run a proper test
+    if (total_sectors < 40000) {
+        vga_write("Disk too small for reliable speed test.\n");
+        return;
+    }
+
+    uint8_t buffer[512];
+    // Fill buffer with a pattern so the disk actually has to work
+    for(int i = 0; i < 512; i++) buffer[i] = (uint8_t)(i % 255);
+
+    // Test 4MB (8192 sectors)
+    uint32_t test_sectors = 8192; 
+    uint32_t safe_offset = 20000; // Start 10MB into the disk
+    
+    vga_write("--- AliOS 4.0 I/O Benchmark (4MB Test) ---\n");
+    vga_write("Target: LBA "); 
+    char lba_buf[16]; vga_write(itoa(safe_offset, lba_buf));
+    vga_write("\n\n");
+
+    // --- WRITE TEST ---
+    vga_write("Testing Write Speed... ");
+    unsigned int start_w = get_uptime_ms(); 
+    for (uint32_t s = 0; s < test_sectors; s++) {
+        ide_write_sector_bytes(safe_offset + s, buffer);
+        
+        // Minor progress update every 1MB
+        if (s % 2048 == 0 && s > 0) vga_putchar('#');
+    }
+    unsigned int time_w = get_uptime_ms() - start_w;
+    vga_write(" Done.\n");
+
+    // --- READ TEST ---
+    vga_write("Testing Read Speed...  ");
+    unsigned int start_r = get_uptime_ms();
+    for (uint32_t s = 0; s < test_sectors; s++) {
+        ide_read_sector_bytes(safe_offset + s, buffer);
+        
+        if (s % 2048 == 0 && s > 0) vga_putchar('#');
+    }
+    unsigned int time_r = get_uptime_ms() - start_r;
+    vga_write(" Done.\n\n");
+
+    // --- RESULTS CALCULATION ---
+    char buf_w[16], buf_r[16], ms_buf[16];
+
+    // Formula: (4MB * 1000) / time_in_ms = MB/s
+    vga_write("RESULTS:\n");
+    
+    if (time_w > 0) {
+        uint32_t speed_w = (4 * 1000) / time_w;
+        vga_write("  Write: "); vga_write(itoa(speed_w, buf_w)); vga_write(" MB/s ");
+        vga_write("("); vga_write(itoa(time_w, ms_buf)); vga_write(" ms)\n");
+    } else {
+        vga_write("  Write: Too fast to measure (< 1ms)\n");
+    }
+
+    if (time_r > 0) {
+        uint32_t speed_r = (4 * 1000) / time_r;
+        vga_write("  Read:  "); vga_write(itoa(speed_r, buf_r)); vga_write(" MB/s ");
+        vga_write("("); vga_write(itoa(time_r, ms_buf)); vga_write(" ms)\n");
+    } else {
+        vga_write("  Read:  Too fast to measure (< 1ms)\n");
+    }
+    
+    vga_write("\nNote: Speeds are limited by PIO Mode overhead.\n");
+}
 
 void shell_init() {
     shell_register_command("help", "List all available commands", cmd_help);
@@ -1082,6 +1151,7 @@ void shell_init() {
     shell_register_command("sfree", "Storage info: df [k|m|g]", print_disk_info);
     shell_register_command("dwipe", "Erase the whole disk (zero out)", cmd_disk_wipe);
     shell_register_command("dshred", "Fill the disk with random noise", cmd_disk_random);
+    shell_register_command("rwsp", "R/W Disk Speed Test", cmd_disk_speed);
 
 }
 
