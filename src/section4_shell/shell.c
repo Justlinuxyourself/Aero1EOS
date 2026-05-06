@@ -27,7 +27,9 @@ extern void ide_write_sector_bytes(uint32_t lba, uint8_t* buffer);
 extern void vga_set_color(unsigned char color);
 extern int cmos_get_sec();
 extern void sleep_ms();
-// Linker symbols (the address of these symbols are our boundaries)
+// Simple PRNG state
+static uint32_t next_rand = 1;
+// kernel start and end
 extern uint8_t _kernel_start;
 extern uint8_t _kernel_end;
 
@@ -978,6 +980,57 @@ void print_disk_info(char* args) {
     vga_write("\nFree:  "); vga_write(itoa((int)free_f, b3));  vga_write(label);
     vga_write("\n");
 }
+void cmd_disk_wipe(char* args) {
+    uint32_t total_sectors = ide_get_total_sectors();
+    uint8_t zero_buffer[512];
+    
+    // Fill buffer with zeros once
+    for (int i = 0; i < 512; i++) zero_buffer[i] = 0;
+
+    vga_write("CRITICAL: Wiping Disk... ");
+
+    for (uint32_t s = 0; s < total_sectors; s++) {
+        ide_write_sector_bytes(s, zero_buffer);
+        
+        // Progress bar every 5%
+        if (s % (total_sectors / 20) == 0) vga_write("#");
+    }
+
+    vga_write("\nDisk Erased Successfully.\n");
+}
+
+void seed_rand(uint32_t seed) {
+    next_rand = seed;
+}
+
+uint8_t get_rand_byte() {
+    // Simple LCG formula
+    next_rand = next_rand * 1103515245 + 12345;
+    return (uint8_t)(next_rand / 65536) % 256;
+}
+
+void cmd_disk_random(char* args) {
+    uint32_t total_sectors = ide_get_total_sectors();
+    uint8_t rand_buffer[512];
+    
+    // Seed the randomizer using current seconds
+    seed_rand(cmos_get_sec());
+
+    vga_write("Writing Random Noise... ");
+
+    for (uint32_t s = 0; s < total_sectors; s++) {
+        // Fill buffer with new random noise for every sector
+        for (int i = 0; i < 512; i++) {
+            rand_buffer[i] = get_rand_byte();
+        }
+
+        ide_write_sector_bytes(s, rand_buffer);
+
+        if (s % (total_sectors / 20) == 0) vga_write("?");
+    }
+
+    vga_write("\nDisk Randomized.\n");
+}
 
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
@@ -1027,6 +1080,9 @@ void shell_init() {
     shell_register_command("write_sector", "Write Sector IDE", cmd_write_disk);
     shell_register_command("install", "Install AliOS", cmd_install);
     shell_register_command("sfree", "Storage info: df [k|m|g]", print_disk_info);
+    shell_register_command("dwipe", "Erase the whole disk (zero out)", cmd_disk_wipe);
+    shell_register_command("dshred", "Fill the disk with random noise", cmd_disk_random);
+
 }
 
 
