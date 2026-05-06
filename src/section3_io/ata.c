@@ -45,3 +45,48 @@ void ide_write_sector_bytes(uint32_t lba, uint8_t* buffer) {
 	outb(0x1F7, 0xE7);
 	ide_wait_bsy();
 }
+
+// Returns the total capacity of the drive in sectors
+uint32_t ide_get_total_sectors() {
+    ide_wait_bsy();
+    
+    // Select Master Drive (0xA0)
+    outb(0x1F6, 0xA0);
+    
+    // IDENTIFY command
+    outb(0x1F7, 0xEC);
+    
+    ide_wait_bsy();
+    
+    // Check if drive exists (status 0 means no drive)
+    if (inb(0x1F7) == 0) return 0;
+
+    ide_wait_drq();
+
+    // Read the 512-byte identification block
+    uint16_t info[256];
+    for (int i = 0; i < 256; i++) {
+        info[i] = inw(0x1F0);
+    }
+
+    // LBA28 Sector count is stored in words 60 and 61
+    uint32_t sectors = (uint32_t)info[60] | ((uint32_t)info[61] << 16);
+    return sectors;
+}
+
+uint32_t ide_calculate_pseudo_used_sectors(uint32_t max_sectors_to_scan) {
+    uint8_t buffer[512];
+    uint32_t used = 0;
+
+    // We only scan the start of the disk so it doesn't take forever
+    for (uint32_t s = 0; s < max_sectors_to_scan; s++) {
+        ide_read_sector_bytes(s, buffer);
+        for (int i = 0; i < 512; i++) {
+            if (buffer[i] != 0) {
+                used++;
+                break; // Sector is "used"
+            }
+        }
+    }
+    return used;
+}
