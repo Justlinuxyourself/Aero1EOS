@@ -187,22 +187,19 @@ void cmd_echo(char* args) {
 }
 
 void cmd_neofetch(char* args) {
-    unsigned int a, b, c, d;
-    char vendor[13];
-    // Get CPU Vendor String (e.g., "GenuineIntel" or "AuthenticAMD")
-    cpuid(0, &a, (unsigned int*)&vendor[0], (unsigned int*)&vendor[8], (unsigned int*)&vendor[4]);
-    vendor[12] = '\0';
-
+    char cpu_name[49];
+    get_cpu_name(cpu_name); 
     char mem_str[16];
-    itoa(get_heap_usage(), mem_str); // Get dynamic memory stats
-
+    itoa(get_heap_usage(), mem_str);
+    
     vga_write("   ______      AliOS 4.0\n");
     vga_write("  / ____/      ----------\n");
-    vga_write(" / /  __       CPU: "); vga_write(vendor); vga_write("\n");
+    vga_write(" / /  __       CPU: "); vga_write(cpu_name); vga_write("\n");
     vga_write("/ /__/ /       MEM: "); vga_write(mem_str); vga_write(" bytes used\n");
     vga_write("\\____ /        HEAP: 0x200000\n");
     vga_write("               MODE: 64-bit Long Mode\n");
 }
+
 void cmd_uptime(char* args) {
     char sec_str[16];
     itoa(get_uptime_seconds(), sec_str); // Use the real timer data
