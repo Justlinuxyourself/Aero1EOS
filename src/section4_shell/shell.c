@@ -910,6 +910,32 @@ void cmd_install(char* args) {
     vga_write("Action: Eject ISO and reboot system.");
 }
 
+uint32_t ide_calculate_usage_FULL() {
+    uint8_t buffer[512];
+    uint32_t used_count = 0;
+    uint32_t total_sectors = ide_get_total_sectors();
+
+    vga_write("Scanning disk... "); // Warning for the user
+
+    for (uint32_t s = 0; s < total_sectors; s++) {
+        ide_read_sector_bytes(s, buffer);
+        
+        // Check if sector is non-zero
+        for (int i = 0; i < 512; i++) {
+            if (buffer[i] != 0) {
+                used_count++;
+                break; 
+            }
+        }
+
+        // Progress indicator every 1000 sectors so you know it's alive
+        if (s % 1000 == 0) vga_putchar('.'); 
+    }
+    
+    vga_write(" DONE\n");
+    return used_count;
+}
+
 void print_disk_info(char* args) {
     uint32_t total_sectors = ide_get_total_sectors();
     if (total_sectors == 0) {
@@ -917,50 +943,41 @@ void print_disk_info(char* args) {
         return;
     }
 
-    uint32_t used_sectors = ide_calculate_pseudo_used_sectors(2048); 
+    // WARNING: This will be slow on large disks!
+    uint32_t used_sectors = ide_calculate_usage_FULL(); 
     uint32_t free_sectors = total_sectors - used_sectors;
 
-    char unit = 'm'; // Default to MB
-    if (args && args[0] != '\0') {
-        unit = args[0];
-    }
+    char unit = 'm'; 
+    if (args && args[0] != '\0') unit = args[0];
 
-    uint32_t total_final, used_final, free_final;
-    const char* unit_label;
+    // Using 64-bit math to be safe
+    uint64_t total_f, used_f, free_f;
+    const char* label;
 
-    // Unit Logic
     if (unit == 'k') {
-        // 1 sector = 0.5 KB. So divide by 2.
-        total_final = total_sectors / 2;
-        used_final  = used_sectors / 2;
-        free_final  = free_sectors / 2;
-        unit_label  = " KB";
-    } 
-    else if (unit == 'g') {
-        // 1 GB = 2,097,152 sectors.
-        total_final = total_sectors / 2097152;
-        used_final  = used_sectors / 2097152;
-        free_final  = free_sectors / 2097152;
-        unit_label  = " GB";
-    } 
-    else {
-        // Default: MB (1 MB = 2048 sectors)
-        total_final = total_sectors / 2048;
-        used_final  = used_sectors / 2048;
-        free_final  = free_sectors / 2048;
-        unit_label  = " MB";
+        total_f = (uint64_t)total_sectors / 2;
+        used_f  = (uint64_t)used_sectors / 2;
+        label   = " KB";
+    } else if (unit == 'g') {
+        total_f = (uint64_t)total_sectors / 2097152;
+        used_f  = (uint64_t)used_sectors / 2097152;
+        label   = " GB";
+    } else {
+        total_f = (uint64_t)total_sectors / 2048;
+        used_f  = (uint64_t)used_sectors / 2048;
+        label   = " MB";
     }
 
-    // Buffers for itoa
-    char b_total[16], b_used[16], b_free[16];
-    
-    vga_write("--- AliOS Storage Stats ---\n");
-    vga_write("Total: "); vga_write(itoa(total_final, b_total)); vga_write(unit_label); vga_write("\n");
-    vga_write("Used:  "); vga_write(itoa(used_final, b_used));   vga_write(unit_label); vga_write("\n");
-    vga_write("Free:  "); vga_write(itoa(free_final, b_free));   vga_write(unit_label); vga_write("\n");
-    vga_write("(Use args: k,m,g if u want in other units)");
-}
+    // Floor protection: if sectors > 0, show at least 1 unit
+    if (used_sectors > 0 && used_f == 0) used_f = 1;
+    free_f = total_f - used_f;
 
+    char b1[20], b2[20], b3[20];
+    vga_write("\nTotal: "); vga_write(itoa((int)total_f, b1)); vga_write(label);
+    vga_write("\nUsed:  "); vga_write(itoa((int)used_f, b2));  vga_write(label);
+    vga_write("\nFree:  "); vga_write(itoa((int)free_f, b3));  vga_write(label);
+    vga_write("\n");
+}
 
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
