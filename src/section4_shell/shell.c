@@ -910,6 +910,40 @@ void cmd_install(char* args) {
     vga_write("Action: Eject ISO and reboot system.");
 }
 
+void print_disk_info() {
+    uint32_t total_sectors = ide_get_total_sectors();
+    
+    if (total_sectors == 0) {
+        vga_write("Error: No IDE drive detected or drive not responding.\n");
+        return;
+    }
+
+    // Convert sectors to MB: (Sectors * 512) / 1024 / 1024
+    // Simplified: Sectors / 2048
+    uint32_t total_mb = total_sectors / 2048;
+
+    // Scan for used sectors (adjust 2048 to scan more or less of the disk)
+    uint32_t used_sectors = ide_calculate_pseudo_used_sectors(2048); 
+    uint32_t used_mb = used_sectors / 2048;
+    
+    // Logic: If any sector is used but it's less than 1MB, show 1MB
+    if (used_sectors > 0 && used_mb == 0) used_mb = 1;
+
+    uint32_t free_mb = total_mb - used_mb;
+
+    // Buffers for itoa
+    char buf_total[12], buf_used[12], buf_free[12];
+    itoa(total_mb, buf_total);
+    itoa(used_mb, buf_used);
+    itoa(total_mb - used_mb, buf_free);
+
+    // Output to screen
+    vga_write("--- Storage Information ---\n");
+    vga_write("Total Capacity: "); vga_write(buf_total); vga_write(" MB\n");
+    vga_write("Used (Approx):  "); vga_write(buf_used);  vga_write(" MB\n");
+    vga_write("Free (Approx):  "); vga_write(buf_free);  vga_write(" MB\n");
+    vga_write("Status:         LBA28 Mode\n");
+}
 
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
@@ -958,6 +992,7 @@ void shell_init() {
     shell_register_command("read_sector", "Read Sector IDE", cmd_read_disk);
     shell_register_command("write_sector", "Write Sector IDE", cmd_write_disk);
     shell_register_command("install", "Install AliOS", cmd_install);
+    shell_register_command("sfree", "Display disk free/total storage info", print_disk_info);
 }
 
 
