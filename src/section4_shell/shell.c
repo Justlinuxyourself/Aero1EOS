@@ -910,40 +910,56 @@ void cmd_install(char* args) {
     vga_write("Action: Eject ISO and reboot system.");
 }
 
-void print_disk_info() {
+void print_disk_info(char* args) {
     uint32_t total_sectors = ide_get_total_sectors();
-    
     if (total_sectors == 0) {
-        vga_write("Error: No IDE drive detected or drive not responding.\n");
+        vga_write("Error: No drive found.\n");
         return;
     }
 
-    // Convert sectors to MB: (Sectors * 512) / 1024 / 1024
-    // Simplified: Sectors / 2048
-    uint32_t total_mb = total_sectors / 2048;
-
-    // Scan for used sectors (adjust 2048 to scan more or less of the disk)
     uint32_t used_sectors = ide_calculate_pseudo_used_sectors(2048); 
-    uint32_t used_mb = used_sectors / 2048;
-    
-    // Logic: If any sector is used but it's less than 1MB, show 1MB
-    if (used_sectors > 0 && used_mb == 0) used_mb = 1;
+    uint32_t free_sectors = total_sectors - used_sectors;
 
-    uint32_t free_mb = total_mb - used_mb;
+    char unit = 'm'; // Default to MB
+    if (args && args[0] != '\0') {
+        unit = args[0];
+    }
+
+    uint32_t total_final, used_final, free_final;
+    const char* unit_label;
+
+    // Unit Logic
+    if (unit == 'k') {
+        // 1 sector = 0.5 KB. So divide by 2.
+        total_final = total_sectors / 2;
+        used_final  = used_sectors / 2;
+        free_final  = free_sectors / 2;
+        unit_label  = " KB";
+    } 
+    else if (unit == 'g') {
+        // 1 GB = 2,097,152 sectors.
+        total_final = total_sectors / 2097152;
+        used_final  = used_sectors / 2097152;
+        free_final  = free_sectors / 2097152;
+        unit_label  = " GB";
+    } 
+    else {
+        // Default: MB (1 MB = 2048 sectors)
+        total_final = total_sectors / 2048;
+        used_final  = used_sectors / 2048;
+        free_final  = free_sectors / 2048;
+        unit_label  = " MB";
+    }
 
     // Buffers for itoa
-    char buf_total[12], buf_used[12], buf_free[12];
-    itoa(total_mb, buf_total);
-    itoa(used_mb, buf_used);
-    itoa(total_mb - used_mb, buf_free);
-
-    // Output to screen
-    vga_write("--- Storage Information ---\n");
-    vga_write("Total Capacity: "); vga_write(buf_total); vga_write(" MB\n");
-    vga_write("Used (Approx):  "); vga_write(buf_used);  vga_write(" MB\n");
-    vga_write("Free (Approx):  "); vga_write(buf_free);  vga_write(" MB\n");
-    vga_write("Status:         LBA28 Mode\n");
+    char b_total[16], b_used[16], b_free[16];
+    
+    vga_write("--- AliOS Storage Stats ---\n");
+    vga_write("Total: "); vga_write(itoa(total_final, b_total)); vga_write(unit_label); vga_write("\n");
+    vga_write("Used:  "); vga_write(itoa(used_final, b_used));   vga_write(unit_label); vga_write("\n");
+    vga_write("Free:  "); vga_write(itoa(free_final, b_free));   vga_write(unit_label); vga_write("\n");
 }
+
 
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
