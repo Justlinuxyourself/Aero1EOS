@@ -28,6 +28,11 @@ extern void ide_write_sector_bytes(uint32_t lba, uint8_t* buffer);
 extern void vga_set_color(unsigned char color);
 extern int cmos_get_sec();
 extern void sleep_ms();
+extern uint32_t ide_get_total_sectors();
+extern unsigned int get_uptime_ms();
+extern char wait_for_key();
+extern int strncmp(const char* s1, const char* s2, int n);
+int alifs_is_directory(char* name);
 // Simple PRNG state
 static uint32_t next_rand = 1;
 // kernel start and end
@@ -639,7 +644,7 @@ void cmd_get(char* key) {
     for(int i = 0; i < 10; i++) {
         if(env_table[i].active) {
             // 2. Double check the stored key exists before comparing
-            if (env_table[i].key != 0 && strcmp(env_table[i].key, key) == 0) {
+            if (env_table[i].key[0] != '\0' && strcmp(env_table[i].key, key) == 0) {
                 vga_write(env_table[i].value);
                 vga_write("\n");
                 return;
@@ -1252,29 +1257,10 @@ void cmd_ls(char* args) {
     alifs_list();
 }
 void cmd_cd(char* args) {
-    char* target = get_filename_arg(args);
-    
-    if (!target || strcmp(target, "..") == 0 || strcmp(target, "/") == 0) {
-        strcpy(current_path, "/");
-        return;
-    }
-
-    // Verify the directory exists in AliFS before entering
-    ide_read_sector_bytes(ALIFS_START_LBA + 1, inode_sector);
-    alifs_inode_t* inodes = (alifs_inode_t*)inode_sector;
-    
-    int found = 0;
-    for (int i = 0; i < MAX_FILES; i++) {
-        if (inodes[i].active && inodes[i].is_dir && strcmp(inodes[i].filename, target) == 0) {
-            found = 1;
-            break;
-        }
-    }
-
-    if (found) {
-        strcpy(current_path, target);
+    if (alifs_is_directory(args)) {
+        strcpy(current_path, args);
     } else {
-        vga_write("Error: Directory not found.\n");
+        vga_write("Directory not found.\n");
     }
 }
 void cmd_mkdir(char* args) {
