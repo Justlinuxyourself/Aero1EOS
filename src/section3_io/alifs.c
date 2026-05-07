@@ -7,7 +7,7 @@ extern void ide_read_sector_bytes(uint32_t lba, void* buffer);
 extern int strcmp(const char* s1, const char* s2);
 extern char* strcpy(char* dest, const char* src);
 extern int strlen(const char* s);
-
+extern int strncmp(const char* s1, const char* s2, int n);
 extern void vga_write(const char* str);
 
 extern char current_path[256]; 
@@ -26,8 +26,6 @@ void alifs_format() {
     vga_write("AliFS Initialized at LBA 20000.\n");
 }
 
-// Bring in the current path from shell.c
-extern char current_path[32]; 
 
 int alifs_create(char* name, char* data) {
     ide_read_sector_bytes(ALIFS_START_LBA + 1, inode_sector);
