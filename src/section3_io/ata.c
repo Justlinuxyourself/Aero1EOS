@@ -94,7 +94,7 @@ uint32_t ide_get_total_sectors() {
     ide_wait_bsy();
     
     // Check if drive exists (status 0 means no drive)
-    if if (status == 0 || status == 0xFF) return 0;
+    if (status == 0 || status == 0xFF) return 0;
 
     ide_wait_drq();
 
