@@ -15,6 +15,8 @@ typedef struct {
     uint8_t is_dir;   // 1 if directory, 0 if file
 } __attribute__((packed)) alifs_inode_t;
 
+extern char current_path[256];
+
 // Filesystem Functions
 void alifs_format();
 int  alifs_create(char* name, char* data);
