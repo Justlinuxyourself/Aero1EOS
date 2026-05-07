@@ -741,7 +741,7 @@ void cmd_menu(char* args) {
             if (selected == 3) { vga_write("Use it in terminal\n"); sleep_ms(1000); vga_clear(); }
             if (selected == 4) { cmd_ayah(); sleep_ms(1000); vga_clear(); }
             if (selected == 5) { draw_custom_plane(); sleep_ms(1000); vga_clear(); }
-            if (selected == 6) { (zshell_lock(); sleep_ms(1000); vga_clear(); }
+            if (selected == 6) { shell_lock(); sleep_ms(1000); vga_clear(); }
             if (selected == 7) { running = 0; }
 
             // If we didn't exit, wait for a key before returning to menu
