@@ -92,7 +92,7 @@ uint32_t ide_get_total_sectors() {
     outb(0x1F7, 0xEC);
     
     ide_wait_bsy();
-    
+    uint8_t status = inb(0x1F7); 
     // Check if drive exists (status 0 means no drive)
     if (status == 0 || status == 0xFF) return 0;
 
