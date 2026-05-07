@@ -54,6 +54,7 @@ void ide_write_sector_bytes(uint32_t lba, uint8_t* buffer) {
 	outb(0x1F4, (uint8_t)(lba >> 8));
 	outb(0x1F5, (uint8_t)(lba >> 16));
 	outb(0x1F7, 0x30);
+    ide_io_wait();
 	ide_wait_bsy();
 	ide_wait_drq();
 	for (int i = 0; i < 256; i++) {
@@ -61,6 +62,7 @@ void ide_write_sector_bytes(uint32_t lba, uint8_t* buffer) {
 		outw(0x1F0, data);
 	}
 	outb(0x1F7, 0xE7);
+    ide_io_wait();
 	ide_wait_bsy();
 }
 
