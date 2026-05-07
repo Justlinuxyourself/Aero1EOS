@@ -850,66 +850,6 @@ void cmd_write_disk(char* args) {
 
     vga_write("DONE!!\n");
 }
-void cmd_install(char* args) {
-    (void)args;
-    
-    // THE MBR BINARY (512 bytes)
-    // EA 00 7E 00 00 is 'jmp 0000:7E00'
-    static uint8_t mbr_full[512] = {
-        0xFA, 0x31, 0xC0, 0x8E, 0xD8, 0x8E, 0xD0, 0xBC, 0x00, 0x7C, 0xFB, 
-        0xB8, 0x42, 0x00, 0xBA, 0x80, 0x00, 0xBE, 0x40, 0x7C, 0xCD, 0x13, 
-        0x72, 0x0C, 0xB4, 0x0E, 0xB0, 0x4A, 0xCD, 0x10, 0xEA, 0x00, 0x7E, 
-        0x00, 0x00, 0xF4, 0xEB, 0xFD,
-        
-        // Disk Address Packet (DAP) at offset 0x40
-        // Offset 0x44: Target Offset (0x7E00)
-        // Offset 0x48: Starting LBA (2048 = 0x0800)
-        [0x40] = 0x10, 0x00, 127, 0x00, 0x00, 0x7E, 0x00, 0x00,
-        [0x48] = 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-
-        [510] = 0x55, [511] = 0xAA // Required BIOS Signature
-    };
-
-    vga_write("\n--- AliOS 4.0 HDD Deployment ---\n");
-
-    // 1. Flash Master Boot Record
-    vga_write("Step 1: Writing MBR to LBA 0... ");
-    ide_write_sector_bytes(0, mbr_full);
-    vga_write("DONE\n");
-
-    // 2. Prepare Kernel (Stripping ELF64 Header)
-    // We start 64 bytes into the kernel to remove the ELF metadata
-    uint64_t raw_start = (uint64_t)&_kernel_start + 64; 
-    uint64_t kernel_end = (uint64_t)&_kernel_end;
-    
-    if (kernel_end <= raw_start) {
-        vga_write("ERROR: Kernel memory map is invalid.\n");
-        return;
-    }
-
-    uint32_t total_bytes = (uint32_t)(kernel_end - raw_start);
-    uint32_t sectors = (total_bytes / 512) + 1;
-
-    vga_write("Step 2: Writing RAW Kernel (");
-    char buf[16];
-    vga_write(itoa(sectors, buf));
-    vga_write(" sectors) to LBA 2048\n");
-
-    // 3. Flash Kernel Sectors
-    for (uint32_t i = 0; i < sectors; i++) {
-        uint8_t* src = (uint8_t*)(raw_start + (i * 512));
-        
-        // Write to LBA 2048 and onwards
-        ide_write_sector_bytes(2048 + i, src);
-        
-        // Progress bar
-        if (i % 50 == 0) vga_write("#");
-    }
-
-    vga_write("\n\nSUCCESS: AliOS is now on the Hard Drive.\n");
-    vga_write("Action: Eject ISO and reboot system.");
-}
-
 uint32_t ide_calculate_usage_FULL() {
     uint8_t buffer[512];
     uint32_t used_count = 0;
@@ -1334,7 +1274,6 @@ void shell_init() {
     shell_register_command("badapple", "Bad Apple", play_bad_apple);
     shell_register_command("read_sector", "Read Sector IDE", cmd_read_disk);
     shell_register_command("write_sector", "Write Sector IDE", cmd_write_disk);
-    shell_register_command("install", "Install AliOS", cmd_install);
     shell_register_command("sfree", "Storage info: df [k|m|g]", print_disk_info);
     shell_register_command("dwipe", "Erase the whole disk (zero out)", cmd_disk_wipe);
     shell_register_command("dshred", "Fill the disk with random noise", cmd_disk_random);
