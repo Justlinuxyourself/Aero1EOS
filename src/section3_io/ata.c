@@ -6,28 +6,46 @@
 #define STATUS_DF 0x20
 #define STATUS_ERR 0x01
 extern uint16_t inw(uint16_t port);
-static void ide_wait_bsy(){
-	while (inb(0x1F7) & STATUS_BSY);
+
+static void ide_wait_bsy() {
+    uint8_t status;
+    while (1) {
+        status = inb(0x1F7);
+        if (status == 0xFF) break; // Floating bus/No drive - avoid infinite loop
+        if (!(status & STATUS_BSY)) break;
+    }
 }
+
 static void ide_wait_drq() {
 	while (!(inb(0x1F7) & STATUS_DRQ));
 }
-void ide_read_sector_bytes(uint32_t lba, uint8_t* buffer) {
-	ide_wait_bsy();
-	outb(0x1F6, 0xE0 | ((lba >> 24) & 0x0F));
-	outb(0x1F2, 1);
-	outb(0x1F3, (uint8_t)lba);
-	outb(0x1F4, (uint8_t)(lba >> 8));
-	outb(0x1F5, (uint8_t)(lba >> 16));
-	outb(0x1F7, 0x20);
-	ide_wait_bsy();
-	ide_wait_drq();
-	for (int i = 0; i < 256; i++) {
-		uint16_t data = inw(0x1F0);
-		buffer[i * 2] = (uint8_t)data;
-		buffer[i * 2 + 1] = (uint8_t)(data >> 8);
-	}
+static void ide_io_wait() {
+    inb(0x3F6); inb(0x3F6); inb(0x3F6); inb(0x3F6);
 }
+
+void ide_read_sector_bytes(uint32_t lba, uint8_t* buffer) {
+    ide_wait_bsy();
+    outb(0x1F6, 0xE0 | ((lba >> 24) & 0x0F));
+    ide_io_wait(); // Wait after drive select
+    
+    outb(0x1F2, 1);
+    outb(0x1F3, (uint8_t)lba);
+    outb(0x1F4, (uint8_t)(lba >> 8));
+    outb(0x1F5, (uint8_t)(lba >> 16));
+    outb(0x1F7, 0x20); // READ SECTORS
+    
+    ide_io_wait(); // CRITICAL: Wait 400ns for the drive to set BSY
+    
+    ide_wait_bsy();
+    ide_wait_drq(); // Wait for Data Request
+    
+    for (int i = 0; i < 256; i++) {
+        uint16_t data = inw(0x1F0);
+        buffer[i * 2] = (uint8_t)data;
+        buffer[i * 2 + 1] = (uint8_t)(data >> 8);
+    }
+}
+
 void ide_write_sector_bytes(uint32_t lba, uint8_t* buffer) {
 	ide_wait_bsy();
 	outb(0x1F6, 0xE0 | ((lba >> 24) & 0x0F));
