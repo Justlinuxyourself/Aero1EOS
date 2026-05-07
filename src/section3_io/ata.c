@@ -47,23 +47,38 @@ void ide_read_sector_bytes(uint32_t lba, uint8_t* buffer) {
 }
 
 void ide_write_sector_bytes(uint32_t lba, uint8_t* buffer) {
-	ide_wait_bsy();
-	outb(0x1F6, 0xE0 | ((lba >> 24) & 0x0F));
-	outb(0x1F2, 1);
-	outb(0x1F3, (uint8_t)lba);
-	outb(0x1F4, (uint8_t)(lba >> 8));
-	outb(0x1F5, (uint8_t)(lba >> 16));
-	outb(0x1F7, 0x30);
+    ide_wait_bsy();
+    
+    // Select drive and LBA bits 24-27
+    outb(0x1F6, 0xE0 | ((lba >> 24) & 0x0F));
     ide_io_wait();
-	ide_wait_bsy();
-	ide_wait_drq();
-	for (int i = 0; i < 256; i++) {
-		uint16_t data = buffer[i * 2] | (buffer[i * 2 + 1] << 8);
-		outw(0x1F0, data);
-	}
-	outb(0x1F7, 0xE7);
+    
+    outb(0x1F2, 1); // Sector count
+    outb(0x1F3, (uint8_t)lba);
+    outb(0x1F4, (uint8_t)(lba >> 8));
+    outb(0x1F5, (uint8_t)(lba >> 16));
+    outb(0x1F7, 0x30); // WRITE SECTORS command
+    
+    ide_io_wait(); 
+    
+    // Wait for drive to be ready to receive data
+    ide_wait_bsy();
+    ide_wait_drq();
+    
+    // Transfer the 512 bytes
+    for (int i = 0; i < 256; i++) {
+        uint16_t data = buffer[i * 2] | (buffer[i * 2 + 1] << 8);
+        outw(0x1F0, data);
+    }
+    
+    // CRITICAL: Wait for the drive to process the data just sent
     ide_io_wait();
-	ide_wait_bsy();
+    ide_wait_bsy(); 
+    
+    // Finalize: Flush the internal HDD cache to the physical platter
+    outb(0x1F7, 0xE7); 
+    ide_io_wait();
+    ide_wait_bsy();
 }
 
 // Returns the total capacity of the drive in sectors
@@ -79,7 +94,7 @@ uint32_t ide_get_total_sectors() {
     ide_wait_bsy();
     
     // Check if drive exists (status 0 means no drive)
-    if (inb(0x1F7) == 0) return 0;
+    if if (status == 0 || status == 0xFF) return 0;
 
     ide_wait_drq();
 
