@@ -38,7 +38,7 @@ static uint32_t next_rand = 1;
 // kernel start and end
 extern uint8_t _kernel_start;
 extern uint8_t _kernel_end;
-static char current_path[256] = "/"; // Start at root
+char current_path[256] = "/"; // Start at root
 typedef struct {
     char key[16];
     char value[32];
