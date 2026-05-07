@@ -10,6 +10,7 @@ extern int strlen(const char* s);
 
 extern void vga_write(const char* str);
 
+extern char current_path[256]; 
 
 // Static buffer to hold the Inode Table during operations
 static uint8_t inode_sector[512] __attribute__((aligned(8)));
@@ -24,8 +25,6 @@ void alifs_format() {
     ide_write_sector_bytes(ALIFS_START_LBA + 1, inode_sector);
     vga_write("AliFS Initialized at LBA 20000.\n");
 }
-
-#include "alifs.h"
 
 // Bring in the current path from shell.c
 extern char current_path[32]; 
