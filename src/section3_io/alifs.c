@@ -84,10 +84,37 @@ void alifs_list() {
     int count = 0;
     for (int i = 0; i < MAX_FILES; i++) {
         if (inodes[i].active) {
-            vga_write("- ");
+            if (inodes[i].is_dir) vga_write("<DIR> ");
+            else vga_write("      ");
+            
             vga_write(inodes[i].filename);
+            vga_write("\n");
             count++;
         }
     }
     if (count == 0) vga_write("(Empty)\n");
+}
+
+int alifs_mkdir(char* name) {
+    ide_read_sector_bytes(ALIFS_START_LBA + 1, inode_sector);
+    alifs_inode_t* inodes = (alifs_inode_t*)inode_sector;
+
+    int slot = -1;
+    for (int i = 0; i < MAX_FILES; i++) {
+        if (!inodes[i].active) {
+            slot = i;
+            break;
+        }
+    }
+
+    if (slot == -1) return -1;
+
+    strcpy(inodes[slot].filename, name);
+    inodes[slot].start_lba = 0; // Directories don't need data sectors yet
+    inodes[slot].size = 0;
+    inodes[slot].active = 1;
+    inodes[slot].is_dir = 1; // Mark as directory
+
+    ide_write_sector_bytes(ALIFS_START_LBA + 1, inode_sector);
+    return 0;
 }
