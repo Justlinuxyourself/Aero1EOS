@@ -97,6 +97,5 @@ You are **NOT** allowed to:
 - [ ] ADD: PCI Driver
 - [ ] ADD: ETH and/or WIFI Support
 - [ ] ADD: GUI Support
-- [ ] ADD: ATA Support
-- [ ] FIX: Beep stutter
-- [ ] FIX: PIT Bug (fix to 100hz without 1sec being 0.5sec)
+- [x] ADD: ATA Support (With AliFS)
+- [x] FIX: Beep stutter (Doesnt stutter on real hardware)
