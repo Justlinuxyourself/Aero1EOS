@@ -33,7 +33,7 @@ static uint32_t next_rand = 1;
 // kernel start and end
 extern uint8_t _kernel_start;
 extern uint8_t _kernel_end;
-
+static char current_path[32] = "/"; // Start at root
 typedef struct {
     char key[16];
     char value[32];
@@ -1033,22 +1033,7 @@ void cmd_disk_random(char* args) {
     vga_write("\nDisk Randomized.\n");
 }
 
-/* --- Shell Logic --- */
-void shell_register_command(const char* name, const char* desc, command_func func) {
-    command_node_t* new_node = (command_node_t*)kmalloc(sizeof(command_node_t));
-    
-    int i = 0;
-    while(name[i] && i < 31) { new_node->name[i] = name[i]; i++; }
-    new_node->name[i] = '\0';
 
-    i = 0;
-    while(desc[i] && i < 63) { new_node->description[i] = desc[i]; i++; }
-    new_node->description[i] = '\0';
-
-    new_node->function = func;
-    new_node->next = command_list;
-    command_list = new_node;
-}
 void cmd_disk_speed(char* args) {
     uint32_t total_sectors = ide_get_total_sectors();
     
@@ -1266,7 +1251,62 @@ void cmd_ls(char* args) {
     // alifs_list() handles the disk reading and VGA printing internally
     alifs_list();
 }
+void cmd_cd(char* args) {
+    char* target = get_filename_arg(args);
+    
+    if (!target || strcmp(target, "..") == 0 || strcmp(target, "/") == 0) {
+        strcpy(current_path, "/");
+        return;
+    }
 
+    // Verify the directory exists in AliFS before entering
+    ide_read_sector_bytes(ALIFS_START_LBA + 1, inode_sector);
+    alifs_inode_t* inodes = (alifs_inode_t*)inode_sector;
+    
+    int found = 0;
+    for (int i = 0; i < MAX_FILES; i++) {
+        if (inodes[i].active && inodes[i].is_dir && strcmp(inodes[i].filename, target) == 0) {
+            found = 1;
+            break;
+        }
+    }
+
+    if (found) {
+        strcpy(current_path, target);
+    } else {
+        vga_write("Error: Directory not found.\n");
+    }
+}
+void cmd_mkdir(char* args) {
+    char* dirname = get_filename_arg(args);
+    if (!dirname) {
+        vga_write("Usage: mkdir <name>\n");
+        return;
+    }
+
+    if (alifs_mkdir(dirname) == 0) {
+        vga_write("Directory created.\n");
+    } else {
+        vga_write("Error: Could not create directory.\n");
+    }
+}
+
+/* --- Shell Logic --- */
+void shell_register_command(const char* name, const char* desc, command_func func) {
+    command_node_t* new_node = (command_node_t*)kmalloc(sizeof(command_node_t));
+    
+    int i = 0;
+    while(name[i] && i < 31) { new_node->name[i] = name[i]; i++; }
+    new_node->name[i] = '\0';
+
+    i = 0;
+    while(desc[i] && i < 63) { new_node->description[i] = desc[i]; i++; }
+    new_node->description[i] = '\0';
+
+    new_node->function = func;
+    new_node->next = command_list;
+    command_list = new_node;
+}
 void shell_init() {
     shell_register_command("help", "List all available commands", cmd_help);
     shell_register_command("cls",  "Clear the notebook screen",   cmd_cls);
@@ -1306,12 +1346,10 @@ void shell_init() {
     shell_register_command("editfi", "Write text to a file", cmd_edit);
     shell_register_command("refi", "Read file content", cmd_cat);
     shell_register_command("fmrt","Wipe and init AliFS", cmd_format);
-
+    shell_register_command("mkdir", "Create a new directory", cmd_mkdir);
+    shell_register_command("gtdi", "Go To DIrectory", cmd_cd);
 
 }
-
-
-/* src/section4_shell/shell.c */
 
 void shell_dispatch(char* buffer) {
     // If the user just hits enter, just print a new prompt on a new line
@@ -1334,7 +1372,9 @@ void shell_dispatch(char* buffer) {
         if (strcmp(curr->name, buffer) == 0) {
             vga_write("\n"); // Move to new line before command output
             curr->function(args);
-            vga_write("\n> "); // Move to new line for the next prompt
+            vga_write("\nAliOS:");
+            vga_write(current_path);
+            vga_write("> ");
             return;
         }
         curr = curr->next;
