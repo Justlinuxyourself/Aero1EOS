@@ -171,16 +171,25 @@ char* itohex(unsigned long value, char* str) {
 
 /* --- Built-in Commands --- */
 void cmd_help(char* args) {
-    vga_write("\nAliOS 4 Commands:");
+    (void)args;
+    
+    vga_write("\nAliOS 4 Commands: ");
+    
     command_node_t* curr = command_list;
     while (curr) {
-        vga_write("\n  ");
         vga_write(curr->name);
         vga_write(" - ");
         vga_write(curr->description);
+        
         curr = curr->next;
+        
+        if (curr) {
+            vga_write(" ||| ");
+        }
     }
+    vga_write("\n"); // Final newline to keep the shell prompt clean
 }
+
 
 void cmd_cls(char* args) {
     vga_clear();
@@ -314,47 +323,30 @@ void draw_custom_plane() {
 }
 
 void twins() {
-    vga_write("APHRODITE\n");
-    vga_write("SAKI (BEST SUNDAY GOONER)\n");
-    vga_write("QOQO\n");
-    vga_write("KEI\n");
-    vga_write("LWAH\n");
-    vga_write("O1\n");
-    vga_write("O2\n");
-    vga_write("RAYA THE KARAOKE QUEEN\n");
-    vga_write("SEL\n");
-    vga_write("ISHI\n");
-    vga_write("ZAZA\n");
-    vga_write("VANILLA & MAX\n");
-    vga_write("SUSTUBE\n");
-    vga_write("ADNAN\n");
-    vga_write("ZIKE (FAF)\n");
-    vga_write("MOLY\n");
-    vga_write("ROSIE\n");
-    vga_write("E\n");
-    vga_write("Sillycat\n");
-    vga_write("Kaisi\n");
-    vga_write("ZANNNNNNNN\n");
-    vga_write("ABDUALLAH\n");
-    vga_write("MIKAY (BATTERY EATER TWINIES)\n");
-    vga_write("ALIYAH\n");
-    vga_write("AYAH\n");
-    vga_write("DANIEL\n");
-    vga_write("ASEEL (MY SIS)\n");
-    vga_write("KHAILD\n");
-    vga_write("AMAL (ASEELS BSF)\n");
-    vga_write("FATMAH/FARAH (MY AUNT)\n");
-    vga_write("HEAIM\n");
-    vga_write("BASMA & MALAK\n");
-    vga_write("OSAMA & SHERIF (PEAKEST UNCLES 4EVER)\n");
-    vga_write("MARCEL\n");
-    vga_write("FERIBSD\n");
-    vga_write("SUMY\n");
-    vga_write("KYOO\n");
-    vga_write("LEXUS\n");
-    vga_write("RAYYAN\n");
-    vga_write("SPECIAL: GaroDaemon");
+    vga_write("\n--- THE TWINS & LEGENDS ---\n");
+    
+    const char* names[] = {
+        "APHRODITE", "SAKI (BEST SUNDAY GOONER)", "QOQO", "KEI", "LWAH", 
+        "O1", "O2", "RAYA THE KARAOKE QUEEN", "SEL", "ISHI", "ZAZA", 
+        "VANILLA & MAX", "SUSTUBE", "ADNAN", "ZIKE (FAF)", "MOLY", 
+        "ROSIE", "E", "Sillycat", "Kaisi", "ZANNNNNNNN", "ABDUALLAH", 
+        "MIKAY (BATTERY EATER TWINIES)", "ALIYAH", "AYAH", "DANIEL", 
+        "ASEEL (MY SIS)", "KHAILD", "AMAL (ASEELS BSF)", "FATMAH/FARAH (MY AUNT)", 
+        "HEAIM", "BASMA & MALAK", "OSAMA & SHERIF (PEAKEST UNCLES 4EVER)", 
+        "MARCEL", "FERIBSD", "SUMY", "KYOO", "LEXUS", "RAYYAN", "SPECIAL: GaroDaemon"
+    };
+
+    int total_names = sizeof(names) / sizeof(names[0]);
+
+    for (int i = 0; i < total_names; i++) {
+        vga_write(names[i]);
+        if (i < total_names - 1) {
+            vga_write(" ||| ");
+        }
+    }
+    vga_write("\n---------------------------\n");
 }
+
 
 void sys_sleep() {
     is_sleeping = 1;
@@ -1257,12 +1249,32 @@ void cmd_ls(char* args) {
     alifs_list();
 }
 void cmd_cd(char* args) {
+    // If user types 'gtdi' with no args, or 'gtdi /', go back to root
+    if (args == 0 || args[0] == '\0' || strcmp(args, "/") == 0) {
+        strcpy(current_path, "/");
+        vga_write("Returned to root.\n");
+        return;
+    }
+
+    // Logic for moving into a sub-directory
     if (alifs_is_directory(args)) {
-        strcpy(current_path, args);
+        if (strcmp(current_path, "/") == 0) {
+            // If we are at root, the new path is just the folder name
+            char temp[256];
+            temp[0] = '/';
+            strcpy(&temp[1], args);
+            strcpy(current_path, temp);
+        } else {
+            // Append the new folder: /old/new
+            int len = strlen(current_path);
+            current_path[len] = '/';
+            strcpy(&current_path[len+1], args);
+        }
     } else {
-        vga_write("Directory not found.\n");
+        vga_write("Error: Directory not found.\n");
     }
 }
+
 void cmd_mkdir(char* args) {
     char* dirname = get_filename_arg(args);
     if (!dirname) {
