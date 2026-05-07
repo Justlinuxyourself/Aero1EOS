@@ -169,3 +169,14 @@ int alifs_mkdir(char* name) {
     vga_write("Directory created successfully.\n");
     return 0;
 }
+int alifs_is_directory(char* name) {
+    ide_read_sector_bytes(ALIFS_START_LBA + 1, inode_sector);
+    alifs_inode_t* inodes = (alifs_inode_t*)inode_sector;
+    for (int i = 0; i < MAX_FILES; i++) {
+        if (inodes[i].active && strcmp(inodes[i].filename, name) == 0) {
+            return inodes[i].is_dir;
+        }
+    }
+    return 0;
+}
+
