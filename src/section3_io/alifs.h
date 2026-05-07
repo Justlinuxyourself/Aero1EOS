@@ -11,7 +11,8 @@ typedef struct {
     char filename[FILENAME_LEN];
     uint32_t start_lba;
     uint32_t size;
-    uint8_t active;   // 1 if file exists, 0 if deleted
+    uint8_t active;   
+    uint8_t is_dir;   // 1 if directory, 0 if file
 } __attribute__((packed)) alifs_inode_t;
 
 // Filesystem Functions
@@ -19,5 +20,6 @@ void alifs_format();
 int  alifs_create(char* name, char* data);
 char* alifs_read(char* name);
 void alifs_list();
+int alifs_mkdir(char* name);
 
 #endif
