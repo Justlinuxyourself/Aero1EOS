@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #define ALIFS_START_LBA 20000  // Safe area on your disk
-#define MAX_FILES 16           // 16 files fit in one 512-byte sector
+#define MAX_FILES 12
 #define FILENAME_LEN 32
 
 typedef struct {
