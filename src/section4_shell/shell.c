@@ -1229,6 +1229,9 @@ void cmd_mkdir(char* args) {
     }
 }
 
+void aosdcserver() {
+    vga_write("https://discord.gg/ymxpjGq9Gu");
+}
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
     command_node_t* new_node = (command_node_t*)kmalloc(sizeof(command_node_t));
@@ -1285,6 +1288,7 @@ void shell_init() {
     shell_register_command("fmrt","Wipe and init AliFS", cmd_format);
     shell_register_command("mkdir", "Create a new directory", cmd_mkdir);
     shell_register_command("gtdi", "Go To DIrectory", cmd_cd);
+    shell_register_command("aosdcserv", "AliOS Discord Server", aosdcserver);
 
 }
 
