@@ -63,22 +63,25 @@ jobs:
           COMMIT_URL: ${{ github.event.head_commit.url }}
           ACTOR: ${{ github.actor }}
         run: |
-          # 1. Capture the diff
+          # 1. Capture the diff and strip the "header" noise
           if [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ] || [ -z "$BEFORE_SHA" ]; then
             BEFORE_SHA=$(git rev-list --max-parents=0 HEAD)
           fi
           
-          RAW_DIFF=$(git diff $BEFORE_SHA $AFTER_SHA -- '*.c' '*.h' '*.asm' '*.s' 'Makefile' '*.md' | head -n 25)
-          if [ -z "$RAW_DIFF" ]; then RAW_DIFF="No source code changes detected."; fi
+          # We use tail -n +5 to skip the 'diff --git', 'index', '---', and '+++' lines
+          # This leaves just the @@ and the +/- lines which Discord colors perfectly
+          RAW_DIFF=$(git diff --patch --unified=3 $BEFORE_SHA $AFTER_SHA -- '*.c' '*.h' '*.asm' '*.s' 'Makefile' '*.md' | grep -E "^[+|-][^+|-]" | head -n 25)
+          
+          if [ -z "$RAW_DIFF" ]; then 
+            RAW_DIFF="No source code changes detected."
+          fi
 
-          # Export for Python
           export FINAL_DIFF="$RAW_DIFF"
 
-          # 2. Python script using simple environment lookups
+          # 2. Build the JSON
           python3 -c '
           import json, os
 
-          # Pull env vars safely
           actor = os.getenv("ACTOR", "Unknown")
           msg = os.getenv("COMMIT_MSG", "No message")
           url = os.getenv("COMMIT_URL", "#")
