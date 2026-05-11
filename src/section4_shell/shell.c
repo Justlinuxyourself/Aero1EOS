@@ -46,7 +46,7 @@ typedef struct {
 } env_var_t;
 
 env_var_t env_table[10]; // Store up to 10 variables in RAM
-// some structs are down with the code that uses it bc i didnt plan for it, it just popped ip in my head
+// some structs are down with the code that uses it bc i didnt plan for it, it just popped up in my head
 typedef struct {
     char task[48];
     int done;
