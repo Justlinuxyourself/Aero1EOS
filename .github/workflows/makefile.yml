@@ -57,6 +57,16 @@ jobs:
         run: |
           curl -H "Content-Type: application/json" \
                -d '{
-                 "content": "<@&1503391410785882225> **AliOS 4 Build Successful:** ${{ github.event.head_commit.url }}"
+                 "content": "<@&1503391410785882225>",
+                 "embeds": [{
+                   "author": {
+                     "name": "${{ github.actor }}",
+                     "icon_url": "https://github.com/github.png"
+                   },
+                   "title": "[AliOS:master] 1 new commit",
+                   "url": "${{ github.event.head_commit.url }}",
+                   "description": "[`${{ github.sha }}`](https://github.com/${{ github.repository }}/commit/${{ github.sha }}) ${{ github.event.head_commit.message }} - ${{ github.actor }}",
+                   "color": 2326507
+                 }]
                }' \
                ${{ secrets.DISCORD_WEBHOOK }}
