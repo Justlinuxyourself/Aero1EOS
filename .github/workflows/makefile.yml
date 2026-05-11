@@ -62,43 +62,64 @@ jobs:
           COMMIT_MSG: ${{ github.event.head_commit.message }}
           COMMIT_URL: ${{ github.event.head_commit.url }}
           ACTOR: ${{ github.actor }}
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
-          # 1. Capture the diff and strip the "header" noise
+          # 1. Capture full diff
           if [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ] || [ -z "$BEFORE_SHA" ]; then
             BEFORE_SHA=$(git rev-list --max-parents=0 HEAD)
           fi
           
-          # We use tail -n +5 to skip the 'diff --git', 'index', '---', and '+++' lines
-          # This leaves just the @@ and the +/- lines which Discord colors perfectly
-          RAW_DIFF=$(git diff --patch --unified=3 $BEFORE_SHA $AFTER_SHA -- '*.c' '*.h' '*.asm' '*.s' 'Makefile' '*.md' | grep -E "^[+|-][^+|-]" | head -n 25)
-          
-          if [ -z "$RAW_DIFF" ]; then 
-            RAW_DIFF="No source code changes detected."
-          fi
-
+          # Get diff with markers
+          RAW_DIFF=$(git diff --unified=0 $BEFORE_SHA $AFTER_SHA -- '*.c' '*.h' '*.asm' '*.s' 'Makefile' '*.md' || echo "")
           export FINAL_DIFF="$RAW_DIFF"
 
-          # 2. Build the JSON
+          # 2. Python logic to group by file inside code blocks
           python3 -c '
           import json, os
 
-          actor = os.getenv("ACTOR", "Unknown")
-          msg = os.getenv("COMMIT_MSG", "No message")
-          url = os.getenv("COMMIT_URL", "#")
-          diff = os.getenv("FINAL_DIFF", "")
+          diff_data = os.getenv("FINAL_DIFF", "")
+          lines = diff_data.split("\n")
+          
+          output_sections = []
+          current_file_changes = []
+          current_file_name = ""
+
+          def flush():
+              nonlocal current_file_changes, output_sections
+              if current_file_name and current_file_changes:
+                  section = f"# {current_file_name} Changes:\n```diff\n"
+                  section += "\n".join(current_file_changes)[:1000]
+                  section += "\n```"
+                  output_sections.append(section)
+                  current_file_changes = []
+
+          for line in lines:
+              if line.startswith("diff --git"):
+                  flush()
+                  current_file_name = line.split(" b/")[-1] if " b/" in line else "Unknown"
+              elif line.startswith("+") and not line.startswith("+++"):
+                  current_file_changes.append(line)
+              elif line.startswith("-") and not line.startswith("---"):
+                  current_file_changes.append(line)
+          
+          flush()
+
+          description = f"**Message:** {os.getenv(\"COMMIT_MSG\")}\n\n" + "\n\n".join(output_sections)
+          if len(description) > 3900:
+              description = description[:3900] + "... (truncated)"
 
           payload = {
               "content": "<@&1503391410785882225>",
               "embeds": [{
                   "author": {
-                      "name": actor,
-                      "icon_url": f"https://github.com/{actor}.png"
+                      "name": os.getenv("ACTOR"),
+                      "icon_url": f"https://github.com/{os.environ.get(\"ACTOR\")}.png"
                   },
                   "title": "🚀 AliOS Build Successful!",
-                  "url": url,
-                  "description": f"**Message:** {msg}\n\n```diff\n{diff}\n```",
+                  "url": os.getenv("COMMIT_URL"),
+                  "description": description,
                   "color": 2326507,
-                  "footer": {"text": "AliOS Continuous Integration 🥹"}
+                  "footer": {"text": "AliOS Notebook Continuous Build 🥹"}
               }]
           }
 
@@ -109,6 +130,5 @@ jobs:
       - name: Post to Discord
         if: always()
         run: |
-          curl -i -X POST -H "Content-Type: application/json" \
-               -d @payload.json \
-               ${{ secrets.DISCORD_WEBHOOK }}
+          curl -i -X POST -H "Content-Type: application/json" -d @payload.json ${{ secrets.DISCORD_WEBHOOK }}
+
