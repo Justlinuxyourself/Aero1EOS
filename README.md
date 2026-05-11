@@ -1,6 +1,6 @@
 # 💻 AliOS 4.0 - Notebook Edition
 > [!WARNING]
-> some features dont work on real hardware.
+> some features dont work on real hardware, and some are untested.
 
 AliOS 4 is a custom-built, 64-bit "Notebook" style operating system. It features a hardened security model, a multi-terminal interface (TTY), and a real-time status bar calibrated for high-precision timing.
 
