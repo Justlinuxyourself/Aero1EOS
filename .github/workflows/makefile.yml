@@ -1,4 +1,3 @@
-
 name: AliOS Automatic Release
 
 on:
@@ -56,33 +55,44 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Send Discord Notification
+        if: always() # Sends even if the build fails, so you know what happened
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          COMMIT_URL: ${{ github.event.head_commit.url }}
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
+          ACTOR: ${{ github.actor }}
         run: |
-          # 1. Get Diff
-          RAW_DIFF=$(git diff ${{ github.event.before }} ${{ github.sha }} -- '*.c' '*.h' '*.asm' '*.s' 'Makefile' '*.md' | head -n 20)
-          [ -z "$RAW_DIFF" ] && RAW_DIFF="No source changes."
+          # 1. Get the Diff
+          # Handle the case where BEFORE_SHA is empty (first push)
+          if [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            BEFORE_SHA=$(git rev-list --max-parents=0 HEAD)
+          fi
+          
+          RAW_DIFF=$(git diff $BEFORE_SHA $AFTER_SHA -- '*.c' '*.h' '*.asm' '*.s' 'Makefile' '*.md' | head -n 25)
+          
+          if [ -z "$RAW_DIFF" ]; then 
+            RAW_DIFF="No source code changes detected (Binary update only)."
+          fi
 
-          # 2. Use Python to build the JSON object safely
-          # This handles all the nasty escaping for you
+          # Export for Python environment
+          export FINAL_DIFF="$RAW_DIFF"
+
+          # 2. Build the JSON safely using Python
           python3 -c '
-          import json, os, sys
-
-          diff_text = os.environ.get("RAW_DIFF", "")
-          msg_text = os.environ.get("COMMIT_MSG", "")
-          actor = os.environ.get("GITHUB_ACTOR", "")
-          commit_url = os.environ.get("COMMIT_URL", "")
-
+          import json, os
+          
           payload = {
               "content": "<@&1503391410785882225>",
               "embeds": [{
                   "author": {
-                      "name": actor,
-                      "icon_url": f"https://github.com/{actor}.png"
+                      "name": os.environ.get("ACTOR"),
+                      "icon_url": f"https://github.com/{os.environ.get(\"ACTOR\")}.png"
                   },
                   "title": "🚀 AliOS Build Successful!",
-                  "url": commit_url,
-                  "description": f"**Message:** {msg_text}\n\n```diff\n{diff_text}\n
+                  "url": os.environ.get("COMMIT_URL"),
+                  "description": f"**Message:** {os.environ.get(\"COMMIT_MSG\")}\n\n```diff\n{os.environ.get(\"FINAL_DIFF\")}\n
 ```",
                   "color": 2326507,
                   "footer": {"text": "AliOS Continuous Integration 🥹"}
@@ -91,12 +101,6 @@ jobs:
           with open("payload.json", "w") as f:
               json.dump(payload, f)
           '
-        env:
-          RAW_DIFF: ${{ steps.get_diff.outputs.diff }} # See note below
-          COMMIT_MSG: ${{ github.event.head_commit.message }}
-          GITHUB_ACTOR: ${{ github.actor }}
-          COMMIT_URL: ${{ github.event.head_commit.url }}
 
-      - name: Post to Discord
-        run: |
-          curl -H "Content-Type: application/json" -d @payload.json ${{ secrets.DISCORD_WEBHOOK }}
+          # 3. Final CURL
+          curl -i -H "Content-Type: application/json" -d @payload.json $DISCORD_WEBHOOK
