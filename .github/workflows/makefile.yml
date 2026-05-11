@@ -53,3 +53,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Ping Discord
+        run: |
+          curl -H "Content-Type: application/json" \
+               -d '{
+                 "content": "<@&1503391410785882225> **AliOS 4 Build Successful:** ${{ github.event.head_commit.url }}"
+               }' \
+               ${{ secrets.DISCORD_WEBHOOK }}
