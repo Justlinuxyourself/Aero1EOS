@@ -18,7 +18,8 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-              fetch-depth: 0
+          fetch-depth: 0
+
       - name: Install Build Dependencies
         run: |
           sudo apt-get update
@@ -54,36 +55,34 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Get Commit Diff
-        id: diff
+      - name: Get Commit Diff and Ping Discord
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
-          # Fetch the previous commit so we can compare
-          git fetch origin ${{ github.event.before }} --depth=1
-          # Get the diff (patch), limit to 10 lines so it fits in Discord
-          DIFF=$(git diff ${{ github.event.before }} ${{ github.sha }} | head -n 10)
-          # Clean up the diff to prevent JSON errors
-          DIFF="${DIFF//'%'/'%25'}"
-          DIFF="${DIFF//$'\n'/'%0A'}"
-          DIFF="${DIFF//$'\r'/'%0D'}"
-          echo "patch=$DIFF" >> $GITHUB_OUTPUT
-
-      - name: Ping Discord
-        run: |
-          # Decode the patch for the curl command
-          PATCH=$(printf "${{ steps.diff.outputs.patch }}")
+          # 1. Extract the diff
+          # Using head -n 15 to provide a bit more context while staying under Discord's limit
+          DIFF=$(git diff ${{ github.event.before }} ${{ github.sha }} | head -n 15)
           
+          # 2. Escape characters for JSON
+          # We escape backslashes and quotes to ensure the curl payload doesn't break
+          ESCAPED_DIFF=$(echo "$DIFF" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
+          ESCAPED_MSG=$(echo "${{ github.event.head_commit.message }}" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
+
+          # 3. Send to Discord
           curl -H "Content-Type: application/json" \
-               -d '{
-                 "content": "<@&1503391410785882225>",
-                 "embeds": [{
-                   "author": {
-                     "name": "${{ github.actor }}",
-                     "icon_url": "https://github.com/github.png"
+               -d "{
+                 \"content\": \"<@&1503391410785882225>\",
+                 \"embeds\": [{
+                   \"author\": {
+                     \"name\": \"${{ github.actor }}\",
+                     \"icon_url\": \"https://github.com/${{ github.actor }}.png\"
                    },
-                   "title": "[AliOS:master] 1 new commit",
-                   "url": "${{ github.event.head_commit.url }}",
-                   "description": "**Message:** ${{ github.event.head_commit.message }}\n\n```diff\n'"$PATCH"'\n```",
-                   "color": 2326507
+                   \"title\": \"[AliOS:master] New Build & Release\",
+                   \"url\": \"${{ github.event.head_commit.url }}\",
+                   \"description\": \"**Message:** $ESCAPED_MSG\\n\\n\`\`\`diff\\n$ESCAPED_DIFF\\n\`\`\`\",
+                   \"color\": 2326507
                  }]
-               }' \
-               ${{ secrets.DISCORD_WEBHOOK }}
+               }" \
+               $DISCORD_WEBHOOK
+
+
