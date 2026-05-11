@@ -93,8 +93,8 @@ You are **NOT** allowed to:
 - pit timer runs at 200hz instead of 100hz for some reason
 - idk/etc 🥹
 ## Todo:
-- [ ] ADD: PCI Driver
-- [ ] ADD: ETH and/or WIFI Suppzort
+- [ ] ADD: PCI Driver (WIP)
+- [ ] ADD: ETH and/or WIFI Support (WIP)
 - [ ] ADD: GUI Support
 - [x] ADD: ATA Support (With AliFS)
 - [x] FIX: Beep stutter (Doesnt stutter on real hardware)
