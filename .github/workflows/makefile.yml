@@ -1,4 +1,3 @@
-
 name: AliOS Automatic Release
 
 on:
@@ -24,14 +23,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            build-essential \
-            nasm \
-            gcc-multilib \
-            binutils \
-            xorriso \
-            mtools \
-            grub-common \
-            grub-pc-bin
+            build-essential nasm gcc-multilib binutils \
+            xorriso mtools grub-common grub-pc-bin cloc jq
 
       - name: Build Kernel and ISO
         run: |
@@ -44,9 +37,7 @@ jobs:
           tag_name: latest
           name: "AliOS Continuous Build"
           body: |
-            This is an automated build of AliOS for the notebook hardware.
-            
-            **Last Updated:** ${{ github.event.head_commit.timestamp }}
+            Automated build of AliOS for the notebook hardware.
             **Commit:** ${{ github.sha }}
           files: |
             alios4.iso
@@ -55,97 +46,87 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Generate Discord Payload
-        if: always()
-        env:
-          BEFORE_SHA: ${{ github.event.before }}
-          AFTER_SHA: ${{ github.sha }}
-          COMMIT_MSG: ${{ github.event.head_commit.message }}
-          COMMIT_URL: ${{ github.event.head_commit.url }}
-          ACTOR: ${{ github.actor }}
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+      - name: Generate Statistics
+        id: stats
         run: |
-          # 1. Capture full diff to a file to avoid "Argument list too long"
+          # Handle initial commit/orphan branch cases
+          BEFORE_SHA=${{ github.event.before }}
           if [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ] || [ -z "$BEFORE_SHA" ]; then
             BEFORE_SHA=$(git rev-list --max-parents=0 HEAD)
           fi
-          
-          git diff --unified=0 $BEFORE_SHA $AFTER_SHA -- '*.c' '*.h' '*.asm' '*.s' 'Makefile' '*.md' > raw_diff.txt || echo "" > raw_diff.txt
 
-          # 2. Python logic reading from the file
-          python3 -c '
-          import json, os
+          echo '{"files": []}' > stats.json
 
-          def run():
+          # Get list of changed files (filtering for source/docs)
+          git diff --name-only $BEFORE_SHA ${{ github.sha }} -- '*.c' '*.h' '*.asm' '*.s' 'Makefile' '*.md' | while read filename; do
+            if [ -f "$filename" ]; then
+              # Get +/- lines
+              STATS=$(git diff --numstat $BEFORE_SHA ${{ github.sha }} -- "$filename")
+              ADDED=$(echo "$STATS" | awk '{print $1}' || echo 0)
+              REMOVED=$(echo "$STATS" | awk '{print $2}' || echo 0)
+              
+              # CLOC snapshots: Before (using git show) and After (local file)
+              # Extracting only the code count from JSON output
+              CLOC_BEFORE=$(git show $BEFORE_SHA:"$filename" 2>/dev/null | cloc --stdin-name="$filename" --json - | jq '.[].code // 0' | head -n 1)
+              CLOC_AFTER=$(cloc "$filename" --json | jq '.[].code // 0' | head -n 1)
+
+              # Append to JSON array
+              jq --arg f "$filename" --arg a "$ADDED" --arg r "$REMOVED" --arg cb "${CLOC_BEFORE:-0}" --arg ca "${CLOC_AFTER:-0}" \
+              '.files += [{"name": $f, "added": $a, "removed": $r, "before": $cb, "after": $ca}]' stats.json > tmp.json && mv tmp.json stats.json
+            fi
+          done
+
+      - name: Post Discord Report
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          python3 << 'EOF'
+          import json
+          import os
+          import requests
+
+          def send_report():
               try:
-                  with open("raw_diff.txt", "r") as f:
-                      lines = f.readlines()
-              except:
-                  lines = []
+                  with open('stats.json', 'r') as f:
+                      data = json.load(f)
+              except Exception as e:
+                  print(f"Error reading stats: {e}")
+                  return
+
+              webhook_url = os.getenv('DISCORD_WEBHOOK')
+              commit_msg = os.getenv('COMMIT_MSG', 'No message')
               
-              output_sections = []
-              current_file_changes = []
-              current_file_name = ""
-
-              def flush():
-                  nonlocal current_file_changes, output_sections
-                  if current_file_name and current_file_changes:
-                      section = f"# {current_file_name} Changes:\n```diff\n"
-                      # Limit internal file diff to 1500 chars to stay safe
-                      content = "".join(current_file_changes)
-                      if len(content) > 1500:
-                          content = content[:1500] + "\n... (file truncated)"
-                      section += content + "```"
-                      output_sections.append(section)
-                      current_file_changes = []
-
-              for line in lines:
-                  line = line.rstrip("\n")
-                  if line.startswith("diff --git"):
-                      flush()
-                      current_file_name = line.split(" b/")[-1] if " b/" in line else "Unknown"
-                  elif line.startswith("+") and not line.startswith("+++"):
-                      current_file_changes.append(line + "\n")
-                  elif line.startswith("-") and not line.startswith("---"):
-                      current_file_changes.append(line + "\n")
+              # Start description with the commit message
+              description = f"**Message:** {commit_msg}\n\n"
               
-              flush()
+              for file in data['files']:
+                  file_block = (
+                      f"**({file['name']})**\n"
+                      f"# {file['added']} lines added\n"
+                      f"# {file['removed']} lines removed\n"
+                      f"```\nCLOC Before update: {file['before']} lines\n```\n"
+                      f"```\nCLOC After update: {file['after']} lines\n
+```\n"
+                  )
+                  # Check to avoid exceeding Discord's embed description limit (4096)
+                  if len(description) + len(file_block) > 3900:
+                      description += "... (more files truncated)"
+                      break
+                  description += file_block
 
-              msg = os.getenv("COMMIT_MSG", "No commit message")
-              description = f"**Message:** {msg}\n\n" + "\n\n".join(output_sections)
-              
-              # Discord limit is 4096. We cap at 3800 to be safe.
-              if len(description) > 3800:
-                  description = description[:3800] + "\n\n... (Total diff truncated)"
-
-              actor = os.getenv("ACTOR", "Unknown")
               payload = {
                   "content": "<@&1503391410785882225>",
                   "embeds": [{
-                      "author": {
-                          "name": actor,
-                          "icon_url": f"https://github.com/{actor}.png"
-                      },
-                      "title": "🚀 AliOS Build Successful!",
-                      "url": os.getenv("COMMIT_URL"),
+                      "title": "AliOS Build Successful! HELL YE🦅🦅🦅",
                       "description": description,
                       "color": 2326507,
                       "footer": {"text": "AliOS Notebook Continuous Build 🥹"}
                   }]
               }
 
-              with open("payload.json", "w") as f:
-                  json.dump(payload, f)
+              requests.post(webhook_url, json=payload)
 
-          run()
-          '
-
-      - name: Post to Discord
-        if: always()
-        run: |
-          if [ -f payload.json ]; then
-            curl -i -X POST -H "Content-Type: application/json" -d @payload.json ${{ secrets.DISCORD_WEBHOOK }}
-          else
-            echo "Payload file not found, skipping Discord post."
-          fi
-
+          if __name__ == "__main__":
+              send_report()
+          EOF
