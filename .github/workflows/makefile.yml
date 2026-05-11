@@ -55,39 +55,48 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Get Source Diff and Ping Discord
+      - name: Send Discord Notification
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
-          # 1. Get the diff with + and - markers. 
-          # We use --unified=3 to get a little context around changes.
-          # Filtering for source files to keep the noise down.
-          RAW_DIFF=$(git diff ${{ github.event.before }} ${{ github.sha }} -- '*.c' '*.h' '*.asm' '*.s' 'Makefile' '*.md' | head -n 25)
-          
-          if [ -z "$RAW_DIFF" ]; then
-            RAW_DIFF="No source code changes detected. Ali is a dumbahh"
-          fi
+          # 1. Get Diff
+          RAW_DIFF=$(git diff ${{ github.event.before }} ${{ github.sha }} -- '*.c' '*.h' '*.asm' '*.s' 'Makefile' '*.md' | head -n 20)
+          [ -z "$RAW_DIFF" ] && RAW_DIFF="No source changes."
 
-          # 2. Robust escaping for JSON
-          # This handles backslashes, quotes, and newlines properly for the curl payload
-          CLEAN_DIFF=$(echo "$RAW_DIFF" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))' | sed 's/^"//;s/"$//')
-          CLEAN_MSG=$(echo "${{ github.event.head_commit.message }}" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))' | sed 's/^"//;s/"$//')
+          # 2. Use Python to build the JSON object safely
+          # This handles all the nasty escaping for you
+          python3 -c '
+          import json, os, sys
 
-          # 3. Construct the JSON with diff syntax highlighting block
-          # Discord identifies '+' as green and '-' as red inside ```diff blocks
-          PAYLOAD="{
-            \"content\": \"<@&1503391410785882225>\",
-            \"embeds\": [{
-              \"author\": {
-                \"name\": \"${{ github.actor }}\",
-                \"icon_url\": \"[https://github.com/$](https://github.com/$){{ github.actor }}.png\"
-              },
-              \"title\": \"AliOS Build Successful YAYAYAYAYAYAYAYAYYYYYYY\",
-              \"url\": \"${{ github.event.head_commit.url }}\",
-              \"description\": \"**Commit Message:**\\n$CLEAN_MSG\\n\\n**Patch Preview:**\\n\`\`\`diff\\n$CLEAN_DIFF\\n\`\`\`\",
-              \"color\": 2326507,
-              \"footer\": { \"text\": \"AliOS Continuous Integration 🥹\" }
-            }]
-          }"
+          diff_text = os.environ.get("RAW_DIFF", "")
+          msg_text = os.environ.get("COMMIT_MSG", "")
+          actor = os.environ.get("GITHUB_ACTOR", "")
+          commit_url = os.environ.get("COMMIT_URL", "")
 
-          curl -H "Content-Type: application/json" -d "$PAYLOAD" $DISCORD_WEBHOOK
+          payload = {
+              "content": "<@&1503391410785882225>",
+              "embeds": [{
+                  "author": {
+                      "name": actor,
+                      "icon_url": f"https://github.com/{actor}.png"
+                  },
+                  "title": "🚀 AliOS Build Successful!",
+                  "url": commit_url,
+                  "description": f"**Message:** {msg_text}\n\n```diff\n{diff_text}\n
+```",
+                  "color": 2326507,
+                  "footer": {"text": "AliOS Continuous Integration 🥹"}
+              }]
+          }
+          with open("payload.json", "w") as f:
+              json.dump(payload, f)
+          '
+        env:
+          RAW_DIFF: ${{ steps.get_diff.outputs.diff }} # See note below
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          COMMIT_URL: ${{ github.event.head_commit.url }}
+
+      - name: Post to Discord
+        run: |
+          curl -H "Content-Type: application/json" -d @payload.json ${{ secrets.DISCORD_WEBHOOK }}
