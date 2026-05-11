@@ -3,7 +3,7 @@ name: AliOS Automatic Release
 on:
   push:
     branches:
-      - master
+      - main
   workflow_dispatch:
 
 jobs:
@@ -54,35 +54,29 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Send Discord Notification
-        if: always() # Sends even if the build fails, so you know what happened
+      - name: Generate Discord Payload
+        if: always()
         env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-          COMMIT_MSG: ${{ github.event.head_commit.message }}
-          COMMIT_URL: ${{ github.event.head_commit.url }}
           BEFORE_SHA: ${{ github.event.before }}
           AFTER_SHA: ${{ github.sha }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          COMMIT_URL: ${{ github.event.head_commit.url }}
           ACTOR: ${{ github.actor }}
         run: |
-          # 1. Get the Diff
-          # Handle the case where BEFORE_SHA is empty (first push)
+          # 1. Capture the diff
+          # Handle first-time push by finding the root commit if BEFORE_SHA is zero
           if [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
             BEFORE_SHA=$(git rev-list --max-parents=0 HEAD)
           fi
           
           RAW_DIFF=$(git diff $BEFORE_SHA $AFTER_SHA -- '*.c' '*.h' '*.asm' '*.s' 'Makefile' '*.md' | head -n 25)
-          
-          if [ -z "$RAW_DIFF" ]; then 
-            RAW_DIFF="No source code changes detected (Binary update only)."
-          fi
+          if [ -z "$RAW_DIFF" ]; then RAW_DIFF="No source code changes detected."; fi
 
-          # Export for Python environment
+          # 2. Use Python to build a perfectly escaped JSON file
           export FINAL_DIFF="$RAW_DIFF"
-
-          # 2. Build the JSON safely using Python
           python3 -c '
           import json, os
-          
+
           payload = {
               "content": "<@&1503391410785882225>",
               "embeds": [{
@@ -92,8 +86,7 @@ jobs:
                   },
                   "title": "🚀 AliOS Build Successful!",
                   "url": os.environ.get("COMMIT_URL"),
-                  "description": f"**Message:** {os.environ.get(\"COMMIT_MSG\")}\n\n```diff\n{os.environ.get(\"FINAL_DIFF\")}\n
-```",
+                  "description": f"**Message:** {os.environ.get(\"COMMIT_MSG\")}\n\n```diff\n{os.environ.get(\"FINAL_DIFF\")}\n```",
                   "color": 2326507,
                   "footer": {"text": "AliOS Continuous Integration 🥹"}
               }]
@@ -102,5 +95,9 @@ jobs:
               json.dump(payload, f)
           '
 
-          # 3. Final CURL
-          curl -i -H "Content-Type: application/json" -d @payload.json $DISCORD_WEBHOOK
+      - name: Post to Discord
+        if: always()
+        run: |
+          curl -i -X POST -H "Content-Type: application/json" \
+               -d @payload.json \
+               ${{ secrets.DISCORD_WEBHOOK }}
