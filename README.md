@@ -77,11 +77,11 @@ AliOS 4 includes a built-in "Bad Apple!!" ASCII animation demo to showcase the s
 * **Demo Assets:** "Bad Apple!!" is a community-driven project based on *Touhou Project*. These ASCII assets are converted and included solely for demonstration of the AliOS 4 video driver.
 
 ## 🔒 Usage Policy
-You are permitted to:
+# You are permitted to:
 ✅ Use this OS for personal purposes  
 ✅ Modify code for learning or improvement  
 
-You are **NOT** allowed to:
+# You are **NOT** allowed to:
 ❌ Rename or rebrand AliOS as your own project  
 ❌ Claim authorship of core components  
 ❌ Remove original copyright notices or credits  
