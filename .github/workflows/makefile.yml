@@ -59,34 +59,35 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
-          # 1. Extract the diff BUT ignore binary files so we get Red/Green text
-          # We filter for common source extensions (.c, .h, .asm, .s, .md, Makefile)
-          # This ensures the bot actually shows the code logic changes.
-          DIFF=$(git diff ${{ github.event.before }} ${{ github.sha }} -- '*.c' '*.h' '*.asm' '*.s' 'Makefile' '*.md' | head -n 30)
+          # 1. Get the diff with + and - markers. 
+          # We use --unified=3 to get a little context around changes.
+          # Filtering for source files to keep the noise down.
+          RAW_DIFF=$(git diff ${{ github.event.before }} ${{ github.sha }} -- '*.c' '*.h' '*.asm' '*.s' 'Makefile' '*.md' | head -n 25)
           
-          # Fallback if the diff is empty (e.g. only binaries changed)
-          if [ -z "$DIFF" ]; then
-            DIFF="No source code changes detected (Binary update only)."
+          if [ -z "$RAW_DIFF" ]; then
+            RAW_DIFF="No source code changes detected. Ali is a dumbahh"
           fi
 
-          # 2. Escape characters for JSON (Newlines, Backslashes, Quotes)
-          ESCAPED_DIFF=$(echo "$DIFF" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
-          ESCAPED_MSG=$(echo "${{ github.event.head_commit.message }}" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
+          # 2. Robust escaping for JSON
+          # This handles backslashes, quotes, and newlines properly for the curl payload
+          CLEAN_DIFF=$(echo "$RAW_DIFF" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))' | sed 's/^"//;s/"$//')
+          CLEAN_MSG=$(echo "${{ github.event.head_commit.message }}" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))' | sed 's/^"//;s/"$//')
 
-          # 3. Send to Discord with diff syntax highlighting
-          curl -H "Content-Type: application/json" \
-               -d "{
-                 \"content\": \"<@&1503391410785882225>\",
-                 \"embeds\": [{
-                   \"author\": {
-                     \"name\": \"${{ github.actor }}\",
-                     \"icon_url\": \"https://github.com/${{ github.actor }}.png\"
-                   },
-                   \"title\": \"[AliOS:master] New Build & Release\",
-                   \"url\": \"${{ github.event.head_commit.url }}\",
-                   \"description\": \"**Message:** $ESCAPED_MSG\\n\\n\`\`\`diff\\n$ESCAPED_DIFF\\n\`\`\`\",
-                   \"color\": 2326507
-                 }]
-               }" \
-               $DISCORD_WEBHOOK
+          # 3. Construct the JSON with diff syntax highlighting block
+          # Discord identifies '+' as green and '-' as red inside ```diff blocks
+          PAYLOAD="{
+            \"content\": \"<@&1503391410785882225>\",
+            \"embeds\": [{
+              \"author\": {
+                \"name\": \"${{ github.actor }}\",
+                \"icon_url\": \"[https://github.com/$](https://github.com/$){{ github.actor }}.png\"
+              },
+              \"title\": \"AliOS Build Successful YAYAYAYAYAYAYAYAYYYYYYY\",
+              \"url\": \"${{ github.event.head_commit.url }}\",
+              \"description\": \"**Commit Message:**\\n$CLEAN_MSG\\n\\n**Patch Preview:**\\n\`\`\`diff\\n$CLEAN_DIFF\\n\`\`\`\",
+              \"color\": 2326507,
+              \"footer\": { \"text\": \"AliOS Continuous Integration 🥹\" }
+            }]
+          }"
 
+          curl -H "Content-Type: application/json" -d "$PAYLOAD" $DISCORD_WEBHOOK
