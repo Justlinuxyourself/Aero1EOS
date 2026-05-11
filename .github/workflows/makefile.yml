@@ -55,20 +55,25 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Get Commit Diff and Ping Discord
+      - name: Get Source Diff and Ping Discord
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
-          # 1. Extract the diff
-          # Using head -n 15 to provide a bit more context while staying under Discord's limit
-          DIFF=$(git diff ${{ github.event.before }} ${{ github.sha }} | head -n 15)
+          # 1. Extract the diff BUT ignore binary files so we get Red/Green text
+          # We filter for common source extensions (.c, .h, .asm, .s, .md, Makefile)
+          # This ensures the bot actually shows the code logic changes.
+          DIFF=$(git diff ${{ github.event.before }} ${{ github.sha }} -- '*.c' '*.h' '*.asm' '*.s' 'Makefile' '*.md' | head -n 30)
           
-          # 2. Escape characters for JSON
-          # We escape backslashes and quotes to ensure the curl payload doesn't break
+          # Fallback if the diff is empty (e.g. only binaries changed)
+          if [ -z "$DIFF" ]; then
+            DIFF="No source code changes detected (Binary update only)."
+          fi
+
+          # 2. Escape characters for JSON (Newlines, Backslashes, Quotes)
           ESCAPED_DIFF=$(echo "$DIFF" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
           ESCAPED_MSG=$(echo "${{ github.event.head_commit.message }}" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
 
-          # 3. Send to Discord
+          # 3. Send to Discord with diff syntax highlighting
           curl -H "Content-Type: application/json" \
                -d "{
                  \"content\": \"<@&1503391410785882225>\",
@@ -84,5 +89,4 @@ jobs:
                  }]
                }" \
                $DISCORD_WEBHOOK
-
 
