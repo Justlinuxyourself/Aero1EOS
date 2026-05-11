@@ -100,8 +100,7 @@ jobs:
                       f"# {file['added']} lines added\n"
                       f"# {file['removed']} lines removed\n"
                       f"```\nCLOC Before update: {file['before']} lines\n```\n"
-                      f"```\nCLOC After update: {file['after']} lines\n
-```\n"
+                      f"```\nCLOC After update: {file['after']} lines\n```\n"
                   )
                   # Cap description at 3900 to avoid the 4096 Discord limit
                   if len(description) + len(file_block) > 3900:
