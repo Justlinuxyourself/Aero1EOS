@@ -97,6 +97,6 @@ AliOS 4 includes a built-in "Bad Apple!!" ASCII animation demo to showcase the s
 ## Todo:
 - [ ] ADD: PCI Driver (WIP)
 - [ ] ADD: ETH and/or WIFI Support (WIP)
-- [ ] ADD: GUI Support
+- [ ] ADD: GUI Support (might never add)
 - [x] ADD: ATA Support (With AliFS)
 - [x] FIX: Beep stutter (Doesnt stutter on real hardware)
