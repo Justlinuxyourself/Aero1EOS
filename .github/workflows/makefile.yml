@@ -3,7 +3,7 @@ name: AliOS Automatic Release
 on:
   push:
     branches:
-      - main
+      - master
   workflow_dispatch:
 
 jobs:
