@@ -5,7 +5,7 @@ BIN = alios4.bin
 ISO = alios4.iso
 
 C_SOURCES = $(shell find $(SRCDIR) -name '*.c')
-ASM_SOURCES = $(shell find $(SRCDIR) -name '*.asm' ! -name 'mbr.asm')
+ASM_SOURCES = $(shell find $(SRCDIR) -name '*.asm')
 
 OBJ = $(C_SOURCES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
 OBJ += $(ASM_SOURCES:$(SRCDIR)/%.asm=$(OBJDIR)/%.o)
@@ -16,13 +16,9 @@ LDFLAGS = -n -T linker.ld --build-id=none -z max-page-size=0x1000 --no-warn-rwx-
 
 all: $(ISO)
 
-mbr_payload: $(SRCDIR)/section1_cpu/mbr.asm
-	mkdir -p include
-	nasm -f bin $< -o mbr.bin
-	xxd -i mbr.bin > include/mbr_bin.h
-	rm mbr.bin
 
-$(BIN): mbr_payload $(OBJ)
+
+$(BIN): $(OBJ)
 	@echo "--- LINKING STEP ---"
 	ld $(LDFLAGS) -o $(BIN) $(OBJDIR)/section1_cpu/boot.o $(filter-out $(OBJDIR)/section1_cpu/boot.o, $(OBJ))
 
@@ -41,6 +37,6 @@ $(ISO): $(BIN)
 	grub-mkrescue -o $(ISO) isodir
 
 clean:
-	rm -rf $(OBJDIR) $(BIN) $(ISO) isodir include/mbr_bin.h
+	rm -rf $(OBJDIR) $(BIN) $(ISO) isodir
 
-.PHONY: all clean mbr_payload
+.PHONY: all clean
