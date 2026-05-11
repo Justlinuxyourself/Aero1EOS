@@ -1,3 +1,4 @@
+
 name: AliOS Automatic Release
 
 on:
@@ -64,71 +65,87 @@ jobs:
           ACTOR: ${{ github.actor }}
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
-          # 1. Capture full diff
+          # 1. Capture full diff to a file to avoid "Argument list too long"
           if [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ] || [ -z "$BEFORE_SHA" ]; then
             BEFORE_SHA=$(git rev-list --max-parents=0 HEAD)
           fi
           
-          # Get diff with markers
-          RAW_DIFF=$(git diff --unified=0 $BEFORE_SHA $AFTER_SHA -- '*.c' '*.h' '*.asm' '*.s' 'Makefile' '*.md' || echo "")
-          export FINAL_DIFF="$RAW_DIFF"
+          git diff --unified=0 $BEFORE_SHA $AFTER_SHA -- '*.c' '*.h' '*.asm' '*.s' 'Makefile' '*.md' > raw_diff.txt || echo "" > raw_diff.txt
 
-          # 2. Python logic to group by file inside code blocks
+          # 2. Python logic reading from the file
           python3 -c '
           import json, os
 
-          diff_data = os.getenv("FINAL_DIFF", "")
-          lines = diff_data.split("\n")
-          
-          output_sections = []
-          current_file_changes = []
-          current_file_name = ""
+          def run():
+              try:
+                  with open("raw_diff.txt", "r") as f:
+                      lines = f.readlines()
+              except:
+                  lines = []
+              
+              output_sections = []
+              current_file_changes = []
+              current_file_name = ""
 
-          def flush():
-              nonlocal current_file_changes, output_sections
-              if current_file_name and current_file_changes:
-                  section = f"# {current_file_name} Changes:\n```diff\n"
-                  section += "\n".join(current_file_changes)[:1000]
-                  section += "\n```"
-                  output_sections.append(section)
-                  current_file_changes = []
+              def flush():
+                  nonlocal current_file_changes, output_sections
+                  if current_file_name and current_file_changes:
+                      section = f"# {current_file_name} Changes:\n```diff\n"
+                      # Limit internal file diff to 1500 chars to stay safe
+                      content = "".join(current_file_changes)
+                      if len(content) > 1500:
+                          content = content[:1500] + "\n... (file truncated)"
+                      section += content + "```"
+                      output_sections.append(section)
+                      current_file_changes = []
 
-          for line in lines:
-              if line.startswith("diff --git"):
-                  flush()
-                  current_file_name = line.split(" b/")[-1] if " b/" in line else "Unknown"
-              elif line.startswith("+") and not line.startswith("+++"):
-                  current_file_changes.append(line)
-              elif line.startswith("-") and not line.startswith("---"):
-                  current_file_changes.append(line)
-          
-          flush()
+              for line in lines:
+                  line = line.rstrip("\n")
+                  if line.startswith("diff --git"):
+                      flush()
+                      current_file_name = line.split(" b/")[-1] if " b/" in line else "Unknown"
+                  elif line.startswith("+") and not line.startswith("+++"):
+                      current_file_changes.append(line + "\n")
+                  elif line.startswith("-") and not line.startswith("---"):
+                      current_file_changes.append(line + "\n")
+              
+              flush()
 
-          description = f"**Message:** {os.getenv(\"COMMIT_MSG\")}\n\n" + "\n\n".join(output_sections)
-          if len(description) > 3900:
-              description = description[:3900] + "... (truncated)"
+              msg = os.getenv("COMMIT_MSG", "No commit message")
+              description = f"**Message:** {msg}\n\n" + "\n\n".join(output_sections)
+              
+              # Discord limit is 4096. We cap at 3800 to be safe.
+              if len(description) > 3800:
+                  description = description[:3800] + "\n\n... (Total diff truncated)"
 
-          payload = {
-              "content": "<@&1503391410785882225>",
-              "embeds": [{
-                  "author": {
-                      "name": os.getenv("ACTOR"),
-                      "icon_url": f"https://github.com/{os.environ.get(\"ACTOR\")}.png"
-                  },
-                  "title": "🚀 AliOS Build Successful!",
-                  "url": os.getenv("COMMIT_URL"),
-                  "description": description,
-                  "color": 2326507,
-                  "footer": {"text": "AliOS Notebook Continuous Build 🥹"}
-              }]
-          }
+              actor = os.getenv("ACTOR", "Unknown")
+              payload = {
+                  "content": "<@&1503391410785882225>",
+                  "embeds": [{
+                      "author": {
+                          "name": actor,
+                          "icon_url": f"https://github.com/{actor}.png"
+                      },
+                      "title": "🚀 AliOS Build Successful!",
+                      "url": os.getenv("COMMIT_URL"),
+                      "description": description,
+                      "color": 2326507,
+                      "footer": {"text": "AliOS Notebook Continuous Build 🥹"}
+                  }]
+              }
 
-          with open("payload.json", "w") as f:
-              json.dump(payload, f)
+              with open("payload.json", "w") as f:
+                  json.dump(payload, f)
+
+          run()
           '
 
       - name: Post to Discord
         if: always()
         run: |
-          curl -i -X POST -H "Content-Type: application/json" -d @payload.json ${{ secrets.DISCORD_WEBHOOK }}
+          if [ -f payload.json ]; then
+            curl -i -X POST -H "Content-Type: application/json" -d @payload.json ${{ secrets.DISCORD_WEBHOOK }}
+          else
+            echo "Payload file not found, skipping Discord post."
+          fi
 
