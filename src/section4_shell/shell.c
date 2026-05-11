@@ -1,4 +1,4 @@
-/* 
+  /* 
 Copyright (c) 2026 Ali  
 All rights reserved.
 */
@@ -1324,7 +1324,10 @@ void shell_dispatch(char* buffer) {
     // If command not found
     vga_write("\nAliOS: '");
     vga_write(buffer);
-    vga_write("' not found. Type 'help'.\n> ");
+    vga_write("' not found. Type 'help'.\n ");
+    vga_write("\nAliOS:");
+    vga_write(current_path);
+    vga_write("> ");
 }
 void shell_tab_complete(char* buffer, int* len) {
     command_node_t* curr = command_list;
