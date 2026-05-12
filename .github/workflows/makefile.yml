@@ -130,8 +130,7 @@ jobs:
                       file_block = (
                           f"**`{file['name']}`**\n"
                           f"{stats_str}\n"
-                          f"```\nLines: {file['before']} -> {file['after']}\n
-```\n"
+                          f"```\nLines: {file['before']} -> {file['after']}\n```\n"
                       )
                       
                       if len(description) + len(file_block) > 3800:
