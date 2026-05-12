@@ -56,19 +56,29 @@ jobs:
 
           echo '{"files": []}' > stats.json
 
-          # Filter for the relevant OS source files
           git diff --name-only $BEFORE_SHA ${{ github.sha }} -- '*.c' '*.h' '*.asm' '*.s' 'Makefile' '*.md' | while read filename; do
             if [ -f "$filename" ]; then
               STATS=$(git diff --numstat $BEFORE_SHA ${{ github.sha }} -- "$filename")
-              ADDED=$(echo "$STATS" | awk '{print $1}' || echo 0)
-              REMOVED=$(echo "$STATS" | awk '{print $2}' || echo 0)
+              RAW_ADDED=$(echo "$STATS" | awk '{print $1}' || echo 0)
+              RAW_REMOVED=$(echo "$STATS" | awk '{print $2}' || echo 0)
               
-              # Capture CLOC code counts (ignoring comments/whitespace)
+              # Logic: Changes = min(added, removed)
+              # New Added = Total Added - Changes
+              # New Removed = Total Removed - Changes
+              if [ "$RAW_ADDED" -lt "$RAW_REMOVED" ]; then
+                CHANGED=$RAW_ADDED
+              else
+                CHANGED=$RAW_REMOVED
+              fi
+              
+              ADDED=$((RAW_ADDED - CHANGED))
+              REMOVED=$((RAW_REMOVED - CHANGED))
+
               CLOC_BEFORE=$(git show $BEFORE_SHA:"$filename" 2>/dev/null | cloc --stdin-name="$filename" --json - | jq '.[].code // 0' | head -n 1)
               CLOC_AFTER=$(cloc "$filename" --json | jq '.[].code // 0' | head -n 1)
 
-              jq --arg f "$filename" --arg a "$ADDED" --arg r "$REMOVED" --arg cb "${CLOC_BEFORE:-0}" --arg ca "${CLOC_AFTER:-0}" \
-              '.files += [{"name": $f, "added": $a, "removed": $r, "before": $cb, "after": $ca}]' stats.json > tmp.json && mv tmp.json stats.json
+              jq --arg f "$filename" --arg a "$ADDED" --arg r "$REMOVED" --arg c "$CHANGED" --arg cb "${CLOC_BEFORE:-0}" --arg ca "${CLOC_AFTER:-0}" \
+              '.files += [{"name": $f, "added": $a, "removed": $r, "changed": $c, "before": $cb, "after": $ca}]' stats.json > tmp.json && mv tmp.json stats.json
             fi
           done
 
@@ -95,14 +105,21 @@ jobs:
               description = f"**Message:** {commit_msg}\n\n"
               
               for file in data['files']:
+                  # Only add lines if they are > 0 to keep the report clean
+                  stats_line = []
+                  if int(file['added']) > 0: stats_line.append(f"# {file['added']} lines added")
+                  if int(file['removed']) > 0: stats_line.append(f"# {file['removed']} lines removed")
+                  if int(file['changed']) > 0: stats_line.append(f"# {file['changed']} lines changed")
+                  
+                  stats_str = "\n".join(stats_line) if stats_line else "# No logic changes"
+
                   file_block = (
                       f"**({file['name']})**\n"
-                      f"# {file['added']} lines added\n"
-                      f"# {file['removed']} lines removed\n"
+                      f"{stats_str}\n"
                       f"```\nCLOC Before update: {file['before']} lines\n```\n"
                       f"```\nCLOC After update: {file['after']} lines\n```\n"
                   )
-                  # Cap description at 3900 to avoid the 4096 Discord limit
+                  
                   if len(description) + len(file_block) > 3900:
                       description += "... (more files truncated)"
                       break
