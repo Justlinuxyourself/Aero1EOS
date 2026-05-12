@@ -16,8 +16,6 @@ LDFLAGS = -n -T linker.ld --build-id=none -z max-page-size=0x1000 --no-warn-rwx-
 
 all: $(ISO)
 
-
-
 $(BIN): $(OBJ)
 	@echo "--- LINKING STEP ---"
 	ld $(LDFLAGS) -o $(BIN) $(OBJDIR)/section1_cpu/boot.o $(filter-out $(OBJDIR)/section1_cpu/boot.o, $(OBJ))
