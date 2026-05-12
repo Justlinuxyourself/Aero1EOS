@@ -1,6 +1,6 @@
 
 <p align="center">
-  <img src="assets/IMG_2512.png" alt="AliOS Logo" width="300">
+  <img src="assets/IMG_2512.jpeg" alt="AliOS Logo" width="300">
 </p>
 
 <h1 align="center">💻 AliOS 4.0 - Notebook Edition</h1>
