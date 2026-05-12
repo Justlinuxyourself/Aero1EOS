@@ -2,58 +2,40 @@
 Copyright (c) 2026 Ali  
 All rights reserved.
 */
-#include "heap.h"
+#ifndef HEAP_H
+#define HEAP_H
 
-// Pull the '_kernel_end' address from the linker script
-extern char _kernel_end; 
+#include <stddef.h>
 
-// Start the heap exactly where the kernel finishes
-static block_header_t* free_list_start = (block_header_t*)&_kernel_end;
-static size_t total_allocated = 0;
+/**
+ * Metadata for each memory block.
+ * This structure sits immediately before the pointer returned to the user.
+ */
+typedef struct block_header {
+    size_t size;            // Size of the data block (excluding header)
+    int is_free;            // 1 if the block is available for reuse, 0 if used
+    struct block_header* next; // Pointer to the next block in the linked list
+} block_header_t;
 
-#define ALIGNMENT 8
-#define ALIGN(size) (((size) + (ALIGNMENT-1)) & ~(ALIGNMENT-1))
+/**
+ * Initializes the heap at the address of the _kernel_end symbol.
+ */
+void init_heap();
 
-void init_heap() {
-    free_list_start->size = 0;
-    free_list_start->is_free = 0;
-    free_list_start->next = NULL;
-}
+/**
+ * Allocates a block of memory of the specified size.
+ * Automatically aligns the size to 8 bytes for 64-bit compatibility.
+ */
+void* kmalloc(size_t size);
 
-void* kmalloc(size_t size) {
-    size = ALIGN(size);
-    block_header_t* current = free_list_start;
+/**
+ * Marks a previously allocated block as free so it can be reused.
+ */
+void kfree(void* ptr);
 
-    // Search for a free block (First Fit)
-    while (current->next != NULL) {
-        if (current->is_free && current->size >= size) {
-            current->is_free = 0;
-            total_allocated += current->size;
-            return (void*)(current + 1);
-        }
-        current = current->next;
-    }
+/**
+ * Returns the total number of bytes currently marked as allocated.
+ */
+size_t get_heap_usage();
 
-    // Allocate new block at the end
-    block_header_t* new_block = (block_header_t*)((unsigned char*)current + sizeof(block_header_t) + current->size);
-    
-    new_block->size = size;
-    new_block->is_free = 0;
-    new_block->next = NULL;
-    
-    current->next = new_block;
-    total_allocated += size;
-
-    return (void*)(new_block + 1); 
-}
-
-void kfree(void* ptr) {
-    if (!ptr) return;
-    block_header_t* block = (block_header_t*)ptr - 1;
-    block->is_free = 1;
-    total_allocated -= block->size;
-}
-
-size_t get_heap_usage() {
-    return total_allocated;
-}
+#endif
