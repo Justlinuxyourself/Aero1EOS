@@ -69,7 +69,7 @@ AliOS 4 is a custom-built, 64-bit "Notebook" style operating system. It features
 AliOS 4 includes a built-in "Bad Apple!!" ASCII animation demo to showcase the stability of the kernel's high-speed VGA memory mapping and the **Notebook-Edition** independent TTY system.
 
 ### 🛠 Technical Specifications
-* **Resolution:** 80x24 (Workspace mode)
+* **Resolution:** 80x24 (Workspace mode) (24 BC OF STATUS BAR!!!(
 * **Frame Rate:** ~10-15 FPS (Adjustable via kernel delay loop)
 * **Protected Status Bar:** The 25th row remains fully functional, displaying the real-time CMOS clock and active TTY ID without flickering during playback.
 * **Memory Mapping:** Direct writes to `0xB8000` using a high-performance DMA-simulated loop.
@@ -93,7 +93,6 @@ AliOS 4 includes a built-in "Bad Apple!!" ASCII animation demo to showcase the s
 ## Bugs:
 - Beep stutters
 - pit timer runs at 200hz instead of 100hz for some reason
-- idk/etc 🥹
 ## Todo:
 - [ ] ADD: PCI Driver (WIP)
 - [ ] ADD: ETH and/or WIFI Support (WIP)
