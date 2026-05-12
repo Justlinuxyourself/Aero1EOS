@@ -84,7 +84,7 @@ AliOS 4 includes a built-in "Bad Apple!!" ASCII animation demo to showcase the s
 ✅ Modify code for learning or improvement  
 
 # You are **NOT** allowed to:
-❌ Rename or rebrand AliOS as your own project  
+❌ Rename or rebrand AliOS as your own project  (if u wanna gimme credits)
 ❌ Claim authorship of core components  
 ❌ Remove original copyright notices or credits  
 
