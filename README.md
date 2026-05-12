@@ -1,6 +1,21 @@
-# 💻 AliOS 4.0 - Notebook Edition
-![C](https://img.shields.io/badge/Built%20With-C-A8B9CC?style=flat-square&logo=c&logoColor=white) ![ASM](https://img.shields.io/badge/Built%20With-Assembly-62A106?style=flat-square&logo=assemblyscript&logoColor=white)
 
+<p align="center">
+  <img src="assets/IMG_2498.png" alt="AliOS Logo" width="300">
+</p>
+
+<h1 align="center">💻 AliOS 4.0 - Notebook Edition</h1>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Built%20With-C-A8B9CC?style=flat-square&logo=c&logoColor=white" alt="C">
+  <img src="https://img.shields.io/badge/Built%20With-Assembly-62A106?style=flat-square&logo=assemblyscript&logoColor=white" alt="ASM">
+</p>
+
+<p align="center">
+  <strong>A custom-built, 64-bit "Notebook" style operating system.</strong><br>
+  Featuring a hardened security model, multi-terminal interface, and real-time hardware integration.
+</p>
+
+---
 > [!WARNING]
 > some features dont work on real hardware, and some are untested.
 
