@@ -36,10 +36,10 @@ AliOS 4 is a custom-built, 64-bit "Notebook" style operating system. It features
 ### 1. Boot & Memory
 * **Kernel Entry:** Written in Assembly (`boot.asm`), it builds a 4-level paging hierarchy: PML4 -> PDPT -> PDT.
 * **Huge Pages:** Identity maps the first 10MB of RAM using 2MB "Huge Pages" to simplify the initial memory map.
-* **Heap Manager:** A dynamic memory allocator starting at the 2MB mark (`0x200000`) to avoid clobbering kernel code.
+* **Heap Manager:** A dynamic memory allocator starting after the kernel (`kernel_end`) to avoid overlapping kernel code when something is added.
 
 ### 2. Clock & Timing
-* **PIT Frequency:** The Programmable Interval Timer is calibrated to **100Hz** (divisor 11931) for uptime and sleep functions.
+* **PIT Frequency:** The Programmable Interval Timer is calibrated to **200Hz** (divisor 11931) for uptime and sleep functions (for some reason it runs at 200hz).
 * **Polling Loop:** The kernel uses a hardware polling loop (`timer_wait_tick`) to ensure the clock updates every 100 ticks without interrupting user input.
 
 ### 3. Video & I/O
