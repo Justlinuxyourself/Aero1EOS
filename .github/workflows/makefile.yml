@@ -50,21 +50,29 @@ jobs:
         id: stats
         run: |
           BEFORE_SHA=${{ github.event.before }}
+          # Handle initial push or empty before_sha
           if [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ] || [ -z "$BEFORE_SHA" ]; then
             BEFORE_SHA=$(git rev-list --max-parents=0 HEAD)
           fi
 
+          # Initialize the JSON file properly
           echo '{"files": []}' > stats.json
 
-          git diff --name-only $BEFORE_SHA ${{ github.sha }} -- '*.c' '*.h' '*.asm' '*.s' 'Makefile' '*.md' | while read filename; do
+          # Get the list of changed files
+          FILES=$(git diff --name-only $BEFORE_SHA ${{ github.sha }} -- '*.c' '*.h' '*.asm' '*.s' 'Makefile' '*.md')
+          
+          for filename in $FILES; do
             if [ -f "$filename" ]; then
               STATS=$(git diff --numstat $BEFORE_SHA ${{ github.sha }} -- "$filename")
+              # If the file was just created, numstat might be empty or formatted differently
               RAW_ADDED=$(echo "$STATS" | awk '{print $1}' || echo 0)
               RAW_REMOVED=$(echo "$STATS" | awk '{print $2}' || echo 0)
               
-              # Logic: Changes = min(added, removed)
-              # New Added = Total Added - Changes
-              # New Removed = Total Removed - Changes
+              # Standardize empty values to 0
+              RAW_ADDED=${RAW_ADDED:-0}
+              RAW_REMOVED=${RAW_REMOVED:-0}
+
+              # Change logic
               if [ "$RAW_ADDED" -lt "$RAW_REMOVED" ]; then
                 CHANGED=$RAW_ADDED
               else
@@ -74,13 +82,22 @@ jobs:
               ADDED=$((RAW_ADDED - CHANGED))
               REMOVED=$((RAW_REMOVED - CHANGED))
 
-              CLOC_BEFORE=$(git show $BEFORE_SHA:"$filename" 2>/dev/null | cloc --stdin-name="$filename" --json - | jq '.[].code // 0' | head -n 1)
-              CLOC_AFTER=$(cloc "$filename" --json | jq '.[].code // 0' | head -n 1)
+              # CLOC counts
+              CLOC_BEFORE=$(git show $BEFORE_SHA:"$filename" 2>/dev/null | cloc --stdin-name="$filename" --json - | jq '.[].code // 0' | head -n 1 || echo 0)
+              CLOC_AFTER=$(cloc "$filename" --json | jq '.[].code // 0' | head -n 1 || echo 0)
 
-              jq --arg f "$filename" --arg a "$ADDED" --arg r "$REMOVED" --arg c "$CHANGED" --arg cb "${CLOC_BEFORE:-0}" --arg ca "${CLOC_AFTER:-0}" \
+              # Update JSON - Using a temporary file to ensure atomic writes
+              jq --arg f "$filename" \
+                 --arg a "$ADDED" \
+                 --arg r "$REMOVED" \
+                 --arg c "$CHANGED" \
+                 --arg cb "${CLOC_BEFORE:-0}" \
+                 --arg ca "${CLOC_AFTER:-0}" \
               '.files += [{"name": $f, "added": $a, "removed": $r, "changed": $c, "before": $cb, "after": $ca}]' stats.json > tmp.json && mv tmp.json stats.json
             fi
           done
+          # Debug: Show the generated JSON in the Action logs
+          cat stats.json
 
       - name: Post Discord Report
         env:
@@ -93,6 +110,13 @@ jobs:
           import requests
 
           def send_report():
+              webhook_url = os.getenv('DISCORD_WEBHOOK')
+              commit_msg = os.getenv('COMMIT_MSG', 'No message')
+              
+              if not os.path.exists('stats.json'):
+                  print("stats.json not found!")
+                  return
+
               try:
                   with open('stats.json', 'r') as f:
                       data = json.load(f)
@@ -100,42 +124,43 @@ jobs:
                   print(f"Error reading stats: {e}")
                   return
 
-              webhook_url = os.getenv('DISCORD_WEBHOOK')
-              commit_msg = os.getenv('COMMIT_MSG', 'No message')
+              # Start the description
               description = f"**Message:** {commit_msg}\n\n"
               
-              for file in data['files']:
-                  # Only add lines if they are > 0 to keep the report clean
-                  stats_line = []
-                  if int(file['added']) > 0: stats_line.append(f"# {file['added']} lines added")
-                  if int(file['removed']) > 0: stats_line.append(f"# {file['removed']} lines removed")
-                  if int(file['changed']) > 0: stats_line.append(f"# {file['changed']} lines changed")
-                  
-                  stats_str = "\n".join(stats_line) if stats_line else "# No logic changes"
+              if not data.get('files'):
+                  description += "*No source code changes detected in this build.*"
+              else:
+                  for file in data['files']:
+                      stats_line = []
+                      if int(file['added']) > 0: stats_line.append(f"• {file['added']} added")
+                      if int(file['removed']) > 0: stats_line.append(f"• {file['removed']} removed")
+                      if int(file['changed']) > 0: stats_line.append(f"• {file['changed']} changed")
+                      
+                      stats_str = "\n".join(stats_line) if stats_line else "• No lines changed"
 
-                  file_block = (
-                      f"**({file['name']})**\n"
-                      f"{stats_str}\n"
-                      f"```\nCLOC Before update: {file['before']} lines\n```\n"
-                      f"```\nCLOC After update: {file['after']} lines\n```\n"
-                  )
-                  
-                  if len(description) + len(file_block) > 3900:
-                      description += "... (more files truncated)"
-                      break
-                  description += file_block
+                      file_block = (
+                          f"**`{file['name']}`**\n"
+                          f"{stats_str}\n"
+                          f"```\nCLOC: {file['before']} -> {file['after']} lines\n```\n"
+                      )
+                      
+                      if len(description) + len(file_block) > 3800:
+                          description += "... (truncated)"
+                          break
+                      description += file_block
 
               payload = {
                   "content": "<@&1503391410785882225>",
                   "embeds": [{
-                      "title": "AliOS Build Successful! HELL YE🦅🦅🦅",
+                      "title": "AliOS Build Successful! HELL YEA-🦅🦅🦅🦅",
                       "description": description,
                       "color": 2326507,
-                      "footer": {"text": "AliOS Notebook Continuous Build 🥹"}
+                      "footer": {"text": "AliOS Continuous Build"}
                   }]
               }
 
-              requests.post(webhook_url, json=payload)
+              r = requests.post(webhook_url, json=payload)
+              print(f"Discord Response: {r.status_code}")
 
           if __name__ == "__main__":
               send_report()
