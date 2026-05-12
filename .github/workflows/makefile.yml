@@ -121,7 +121,7 @@ jobs:
               payload = {
                   "content": "<@&1503391410785882225>",
                   "embeds": [{
-                      "title": "AliOS Build Successful! 🦅",
+                      "title": "AliOS Build Successful! HELL YEA-🦅",
                       "description": description,
                       "color": 2326507
                   }]
