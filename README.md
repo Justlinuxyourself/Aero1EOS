@@ -74,21 +74,20 @@ AliOS 4 includes a built-in "Bad Apple!!" ASCII animation demo to showcase the s
 * **Protected Status Bar:** The 25th row remains fully functional, displaying the real-time CMOS clock and active TTY ID without flickering during playback.
 * **Memory Mapping:** Direct writes to `0xB8000` using a high-performance DMA-simulated loop.
 
-### 📜 Licensing & Credits
-* **Kernel Code:** Licensed under **GNU GPLv3**.
-* **Demo Assets:** "Bad Apple!!" is a community-driven project based on *Touhou Project*. These ASCII assets are converted and included solely for demonstration of the AliOS 4 video driver.
+## 📜 Licensing & Credits
 
-## 🔒 Usage Policy
-# You are permitted to:
-✅ Use this OS for personal purposes  
-✅ Modify code for learning or improvement  
+### Kernel & Operating System
+AliOS 4.0 is open-source software licensed under the **MIT License**. 
 
-# You are **NOT** allowed to:
-❌ Rename or rebrand AliOS as your own project  (if u wanna gimme credits)
-❌ Claim authorship of core components  
-❌ Remove original copyright notices or credits  
+By using, modifying, or distributing this software, you agree to the following terms:
+* **Attribution Required:** You must preserve the original copyright notice and permission notice in all copies or substantial portions of the software.
+* **No Warranty:** The software is provided "as is", without warranty of any kind. The author is not liable for any damages or data loss resulting from its use.
 
-⚠️ Violators will have their repos reported + exposed publicly across platforms. Git history does not lie.
+> [!CAUTION]
+> **Plagiarism Warning:** While the MIT license permits modification and redistribution, removing the developer's name, claiming authorship of the original core components, or rebranding AliOS without explicit attribution violates the license terms. Copyright infringement and license violations will be tracked via Git history and reported publicly on hosting platforms.
+
+### Demo Assets
+* **Bad Apple!! Animation:** Based on *Touhou Project*. These ASCII assets are community-driven and included solely for demonstrating the AliOS 4 video driver performance.
 
 ## Bugs:
 - Beep stutters
