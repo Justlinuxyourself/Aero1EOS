@@ -228,11 +228,17 @@ void cmd_neofetch(char* args) {
     char mem_str[16];
     itoa(get_heap_usage(), mem_str);
     
+    // Get the actual hex address of the heap
+    char heap_addr_buf[16];
+    itohex((unsigned long)&_kernel_end, heap_addr_buf);
+    
     vga_write("   ______      AliOS 4.0\n");
     vga_write("  / ____/      ----------\n");
     vga_write(" / /  __       CPU: "); vga_write(cpu_name); vga_write("\n");
     vga_write("/ /__/ /       MEM: "); vga_write(mem_str); vga_write(" bytes used\n");
-    vga_write("\\____ /        HEAP: 0x200000\n");
+    
+    // NO MORE HARDCODING: Show the real address
+    vga_write("\\____ /        HEAP: 0x"); vga_write(heap_addr_buf); vga_write("\n");
     vga_write("               MODE: 64-bit Long Mode\n");
 }
 
