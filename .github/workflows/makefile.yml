@@ -49,47 +49,39 @@ jobs:
       - name: Generate Statistics
         id: stats
         run: |
-          # Compare the current commit (HEAD) to its parent (HEAD~)
-          # This ensures we only see what changed in the most recent push
+          # Compare the last commit to its parent
           BEFORE_SHA="HEAD~1"
           CURRENT_SHA="HEAD"
 
-          # Initialize JSON
           echo '{"files": []}' > stats.json
 
-          # Get list of files changed in the LAST commit only
+          # Filter for relevant source files
           FILES=$(git diff --name-only $BEFORE_SHA $CURRENT_SHA -- '*.c' '*.h' '*.asm' '*.s' 'Makefile' '*.md' || echo "")
           
-          if [ -z "$FILES" ]; then
-            echo "No relevant source files changed."
-          else
+          if [ ! -z "$FILES" ]; then
             for filename in $FILES; do
               if [ -f "$filename" ]; then
-                # Get the actual line diffs
+                # Get raw numbers from git numstat
                 STATS=$(git diff --numstat $BEFORE_SHA $CURRENT_SHA -- "$filename")
                 RAW_ADDED=$(echo "$STATS" | awk '{print $1}' | grep -E '^[0-9]+$' || echo 0)
                 RAW_REMOVED=$(echo "$STATS" | awk '{print $2}' | grep -E '^[0-9]+$' || echo 0)
 
-                # Logic: Changes = min(added, removed)
+                # Calculate "Changed" as the overlapping lines
                 if [ "$RAW_ADDED" -lt "$RAW_REMOVED" ]; then
                   CHANGED=$RAW_ADDED
                 else
                   CHANGED=$RAW_REMOVED
                 fi
                 
-                ADDED=$((RAW_ADDED - CHANGED))
-                REMOVED=$((RAW_REMOVED - CHANGED))
+                # The leftovers are pure additions or pure removals
+                PURE_ADDED=$((RAW_ADDED - CHANGED))
+                PURE_REMOVED=$((RAW_REMOVED - CHANGED))
 
-                # Get CLOC counts
-                CLOC_BEFORE=$(git show $BEFORE_SHA:"$filename" 2>/dev/null | cloc --stdin-name="$filename" --json - | jq '.[].code // 0' | head -n 1 || echo 0)
-                CLOC_AFTER=$(cloc "$filename" --json | jq '.[].code // 0' | head -n 1 || echo 0)
-
-                jq --arg f "$filename" --arg a "$ADDED" --arg r "$REMOVED" --arg c "$CHANGED" --arg cb "$CLOC_BEFORE" --arg ca "$CLOC_AFTER" \
-                '.files += [{"name": $f, "added": $a, "removed": $r, "changed": $c, "before": $cb, "after": $ca}]' stats.json > tmp.json && mv tmp.json stats.json
+                jq --arg f "$filename" --arg a "$PURE_ADDED" --arg r "$PURE_REMOVED" --arg c "$CHANGED" \
+                '.files += [{"name": $f, "added": $a, "removed": $r, "changed": $c}]' stats.json > tmp.json && mv tmp.json stats.json
               fi
             done
           fi
-          cat stats.json
 
       - name: Post Discord Report
         env:
@@ -103,40 +95,28 @@ jobs:
 
           def send_report():
               webhook_url = os.getenv('DISCORD_WEBHOOK')
-              commit_msg = os.getenv('COMMIT_MSG', 'Manual build or dispatch')
+              commit_msg = os.getenv('COMMIT_MSG', 'Manual Update')
               
-              if not os.path.exists('stats.json'):
-                  return
-
+              if not os.path.exists('stats.json'): return
               try:
                   with open('stats.json', 'r') as f:
                       data = json.load(f)
-              except:
-                  return
+              except: return
 
-              description = f"**Commit Message:** {commit_msg}\n\n"
+              description = f"**Commit:** {commit_msg}\n\n"
               
               if not data.get('files'):
-                  description += "*Build updated, but no source code changes detected in this push.*"
+                  description += "_No source changes._"
               else:
                   for file in data['files']:
-                      lines = []
-                      if int(file['added']) > 0: lines.append(f"• {file['added']} added")
-                      if int(file['removed']) > 0: lines.append(f"• {file['removed']} removed")
-                      if int(file['changed']) > 0: lines.append(f"• {file['changed']} changed")
+                      stats = []
+                      if int(file['added']) > 0: stats.append(f"+{file['added']} added")
+                      if int(file['removed']) > 0: stats.append(f"-{file['removed']} removed")
+                      if int(file['changed']) > 0: stats.append(f"~{file['changed']} changed")
                       
-                      stats_str = "\n".join(lines) if lines else "• Metadata/Format changes"
-                      
-                      file_block = (
-                          f"**`{file['name']}`**\n"
-                          f"{stats_str}\n"
-                          f"```\nLines: {file['before']} -> {file['after']}\n```\n"
-                      )
-                      
-                      if len(description) + len(file_block) > 3800:
-                          description += "... (truncated)"
-                          break
-                      description += file_block
+                      # join the stats with a dot for a single-line look
+                      stat_line = " | ".join(stats) if stats else "No line changes"
+                      description += f"**`{file['name']}`**\n`{stat_line}`\n"
 
               payload = {
                   "content": "<@&1503391410785882225>",
