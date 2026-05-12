@@ -13,7 +13,6 @@ All rights reserved.
 #define VGA_ADDRESS 0xB8000
 volatile int is_sleeping = 0;
 static command_node_t* command_list = 0;
-extern unsigned int get_heap_usage();
 extern unsigned int get_uptime_seconds();
 extern unsigned int get_total_ram_bytes();
 extern void lock_system_hardened();
