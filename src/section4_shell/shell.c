@@ -55,6 +55,25 @@ typedef struct {
 
 todo_t my_list[10]; // 10 slots for your daily goals
 
+typedef struct {
+    const char* ar;
+    const char* en;
+    const char* meaning;
+} name_99_t;
+
+typedef struct {
+    const char* book;
+    int chapter;
+    int verse;
+    const char* text;
+} bible_t;
+
+typedef struct {
+    int surah;
+    int ayah;
+    const char* text;
+} ayah_t;
+
 /* --- String Helpers --- */
 int strcmp(const char* s1, const char* s2) {
     while (*s1 && (*s1 == *s2)) { s1++; s2++; }
@@ -524,11 +543,6 @@ void cmd_poke(char* args) {
     vga_write(addr_str);
     vga_write("\n");
 }
-typedef struct {
-    int surah;
-    int ayah;
-    const char* text;
-} ayah_t;
 
 void cmd_ayah() {
     // Array of Ayahs stored in the Kernel Data Segment
@@ -558,12 +572,6 @@ void cmd_ayah() {
     vga_write(quran_db[r].text);
     vga_write("\n");
 }
-typedef struct {
-    const char* book;
-    int chapter;
-    int verse;
-    const char* text;
-} bible_t;
 
 void cmd_verse() {
     bible_t bible_db[] = {
@@ -1248,6 +1256,33 @@ void shell_register_command(const char* name, const char* desc, command_func fun
     new_node->next = command_list;
     command_list = new_node;
 }
+
+void cmd_asma(char* args) {
+    name_99_t names[] = {
+        {"Ar-Rahman", "The Beneficent", "He who wills goodness and mercy for all His creatures."},
+        {"Ar-Rahim", "The Merciful", "He who acts with extreme kindness."},
+        {"Al-Malik", "The Eternal Lord", "The Sovereign Lord, The One with complete Dominion."},
+        {"Al-Quddus", "The Most Sacred", "The One who is pure from any imperfection."},
+        {"As-Salam", "The Embodiment of Peace", "The One who frees His servants from all danger."},
+        {"Al-Mu'min", "The Infuser of Faith", "The One who witnessed for Himself and whose help is explained."},
+        {"Al-Muhaymin", "The Preserver of Safety", "The One who witnesses the evolution of His creatures."},
+        {"Al-Aziz", "The Mighty One", "The Victorious One where no resistance can be raised."},
+        {"Al-Jabbar", "The Omnipotent One", "The Irresistible Subduer."},
+        {"Al-Mutakabbir", "The Dominant One", "The One who is proud and beyond every creation."}
+    };
+
+    int db_size = sizeof(names) / sizeof(name_99_t);
+    
+    // Seed the randomness using your CMOS and Uptime
+    int r = (cmos_get_sec() + (get_uptime_ms() % 100)) % db_size;
+
+    vga_write("\n--- [ ASMA-UL-HUSNA ] ---\n");
+    vga_write("Name: "); vga_write(names[r].ar);
+    vga_write(" ("); vga_write(names[r].en); vga_write(")\n");
+    vga_write("Meaning: "); vga_write(names[r].meaning);
+    vga_write("\n-------------------------\n");
+}
+
 void shell_init() {
     shell_register_command("help", "List all available commands", cmd_help);
     shell_register_command("cls",  "Clear the notebook screen",   cmd_cls);
@@ -1289,6 +1324,7 @@ void shell_init() {
     shell_register_command("mkdir", "Create a new directory", cmd_mkdir);
     shell_register_command("gtdi", "Go To DIrectory", cmd_cd);
     shell_register_command("aosdcserv", "AliOS Discord Server", aosdcserver);
+    shell_register_command("asma", "Random Name of Allah and its meaning", cmd_asma);
 
 }
 
