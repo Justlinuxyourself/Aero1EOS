@@ -1,4 +1,6 @@
 # 💻 AliOS 4.0 - Notebook Edition
+![C](https://img.shields.io/badge/Built%20With-C-A8B9CC?style=flat-square&logo=c&logoColor=white) ![ASM](https://img.shields.io/badge/Built%20With-Assembly-62A106?style=flat-square&logo=assemblyscript&logoColor=white)
+
 > [!WARNING]
 > some features dont work on real hardware, and some are untested.
 
