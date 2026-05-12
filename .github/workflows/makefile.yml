@@ -49,54 +49,46 @@ jobs:
       - name: Generate Statistics
         id: stats
         run: |
-          BEFORE_SHA=${{ github.event.before }}
-          # Handle initial push or empty before_sha
-          if [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ] || [ -z "$BEFORE_SHA" ]; then
-            BEFORE_SHA=$(git rev-list --max-parents=0 HEAD)
-          fi
+          # Compare the current commit (HEAD) to its parent (HEAD~)
+          # This ensures we only see what changed in the most recent push
+          BEFORE_SHA="HEAD~1"
+          CURRENT_SHA="HEAD"
 
-          # Initialize the JSON file properly
+          # Initialize JSON
           echo '{"files": []}' > stats.json
 
-          # Get the list of changed files
-          FILES=$(git diff --name-only $BEFORE_SHA ${{ github.sha }} -- '*.c' '*.h' '*.asm' '*.s' 'Makefile' '*.md')
+          # Get list of files changed in the LAST commit only
+          FILES=$(git diff --name-only $BEFORE_SHA $CURRENT_SHA -- '*.c' '*.h' '*.asm' '*.s' 'Makefile' '*.md' || echo "")
           
-          for filename in $FILES; do
-            if [ -f "$filename" ]; then
-              STATS=$(git diff --numstat $BEFORE_SHA ${{ github.sha }} -- "$filename")
-              # If the file was just created, numstat might be empty or formatted differently
-              RAW_ADDED=$(echo "$STATS" | awk '{print $1}' || echo 0)
-              RAW_REMOVED=$(echo "$STATS" | awk '{print $2}' || echo 0)
-              
-              # Standardize empty values to 0
-              RAW_ADDED=${RAW_ADDED:-0}
-              RAW_REMOVED=${RAW_REMOVED:-0}
+          if [ -z "$FILES" ]; then
+            echo "No relevant source files changed."
+          else
+            for filename in $FILES; do
+              if [ -f "$filename" ]; then
+                # Get the actual line diffs
+                STATS=$(git diff --numstat $BEFORE_SHA $CURRENT_SHA -- "$filename")
+                RAW_ADDED=$(echo "$STATS" | awk '{print $1}' | grep -E '^[0-9]+$' || echo 0)
+                RAW_REMOVED=$(echo "$STATS" | awk '{print $2}' | grep -E '^[0-9]+$' || echo 0)
 
-              # Change logic
-              if [ "$RAW_ADDED" -lt "$RAW_REMOVED" ]; then
-                CHANGED=$RAW_ADDED
-              else
-                CHANGED=$RAW_REMOVED
+                # Logic: Changes = min(added, removed)
+                if [ "$RAW_ADDED" -lt "$RAW_REMOVED" ]; then
+                  CHANGED=$RAW_ADDED
+                else
+                  CHANGED=$RAW_REMOVED
+                fi
+                
+                ADDED=$((RAW_ADDED - CHANGED))
+                REMOVED=$((RAW_REMOVED - CHANGED))
+
+                # Get CLOC counts
+                CLOC_BEFORE=$(git show $BEFORE_SHA:"$filename" 2>/dev/null | cloc --stdin-name="$filename" --json - | jq '.[].code // 0' | head -n 1 || echo 0)
+                CLOC_AFTER=$(cloc "$filename" --json | jq '.[].code // 0' | head -n 1 || echo 0)
+
+                jq --arg f "$filename" --arg a "$ADDED" --arg r "$REMOVED" --arg c "$CHANGED" --arg cb "$CLOC_BEFORE" --arg ca "$CLOC_AFTER" \
+                '.files += [{"name": $f, "added": $a, "removed": $r, "changed": $c, "before": $cb, "after": $ca}]' stats.json > tmp.json && mv tmp.json stats.json
               fi
-              
-              ADDED=$((RAW_ADDED - CHANGED))
-              REMOVED=$((RAW_REMOVED - CHANGED))
-
-              # CLOC counts
-              CLOC_BEFORE=$(git show $BEFORE_SHA:"$filename" 2>/dev/null | cloc --stdin-name="$filename" --json - | jq '.[].code // 0' | head -n 1 || echo 0)
-              CLOC_AFTER=$(cloc "$filename" --json | jq '.[].code // 0' | head -n 1 || echo 0)
-
-              # Update JSON - Using a temporary file to ensure atomic writes
-              jq --arg f "$filename" \
-                 --arg a "$ADDED" \
-                 --arg r "$REMOVED" \
-                 --arg c "$CHANGED" \
-                 --arg cb "${CLOC_BEFORE:-0}" \
-                 --arg ca "${CLOC_AFTER:-0}" \
-              '.files += [{"name": $f, "added": $a, "removed": $r, "changed": $c, "before": $cb, "after": $ca}]' stats.json > tmp.json && mv tmp.json stats.json
-            fi
-          done
-          # Debug: Show the generated JSON in the Action logs
+            done
+          fi
           cat stats.json
 
       - name: Post Discord Report
@@ -111,37 +103,35 @@ jobs:
 
           def send_report():
               webhook_url = os.getenv('DISCORD_WEBHOOK')
-              commit_msg = os.getenv('COMMIT_MSG', 'No message')
+              commit_msg = os.getenv('COMMIT_MSG', 'Manual build or dispatch')
               
               if not os.path.exists('stats.json'):
-                  print("stats.json not found!")
                   return
 
               try:
                   with open('stats.json', 'r') as f:
                       data = json.load(f)
-              except Exception as e:
-                  print(f"Error reading stats: {e}")
+              except:
                   return
 
-              # Start the description
-              description = f"**Message:** {commit_msg}\n\n"
+              description = f"**Commit Message:** {commit_msg}\n\n"
               
               if not data.get('files'):
-                  description += "*No source code changes detected in this build.*"
+                  description += "*Build updated, but no source code changes detected in this push.*"
               else:
                   for file in data['files']:
-                      stats_line = []
-                      if int(file['added']) > 0: stats_line.append(f"• {file['added']} added")
-                      if int(file['removed']) > 0: stats_line.append(f"• {file['removed']} removed")
-                      if int(file['changed']) > 0: stats_line.append(f"• {file['changed']} changed")
+                      lines = []
+                      if int(file['added']) > 0: lines.append(f"• {file['added']} added")
+                      if int(file['removed']) > 0: lines.append(f"• {file['removed']} removed")
+                      if int(file['changed']) > 0: lines.append(f"• {file['changed']} changed")
                       
-                      stats_str = "\n".join(stats_line) if stats_line else "• No lines changed"
-
+                      stats_str = "\n".join(lines) if lines else "• Metadata/Format changes"
+                      
                       file_block = (
                           f"**`{file['name']}`**\n"
                           f"{stats_str}\n"
-                          f"```\nCLOC: {file['before']} -> {file['after']} lines\n```\n"
+                          f"```\nLines: {file['before']} -> {file['after']}\n
+```\n"
                       )
                       
                       if len(description) + len(file_block) > 3800:
@@ -152,15 +142,12 @@ jobs:
               payload = {
                   "content": "<@&1503391410785882225>",
                   "embeds": [{
-                      "title": "AliOS Build Successful! HELL YEA-🦅🦅🦅🦅",
+                      "title": "AliOS Build Successful! 🦅",
                       "description": description,
-                      "color": 2326507,
-                      "footer": {"text": "AliOS Continuous Build"}
+                      "color": 2326507
                   }]
               }
-
-              r = requests.post(webhook_url, json=payload)
-              print(f"Discord Response: {r.status_code}")
+              requests.post(webhook_url, json=payload)
 
           if __name__ == "__main__":
               send_report()
