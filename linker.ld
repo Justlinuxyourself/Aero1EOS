@@ -1,18 +1,17 @@
 ENTRY(_start)
 
 SECTIONS {
-    /* 1. Start at a low physical offset for the header */
-    . = 0x1000; 
+    /* Standard load address for Multiboot kernels */
+    . = 1M;
 
-    .multiboot : 
+		_kernel_end = .;
+
+
+    /* The Multiboot header must be near the start of the file */
+    .multiboot : ALIGN(8)
     {
-        /* This MUST be at the beginning of the binary file */
         KEEP(*(.multiboot))
     }
-
-    /* 2. Now jump to 1MB for the actual kernel code */
-    . = 1M;
-    _kernel_start = .;
 
     .text : ALIGN(4K)
     {
