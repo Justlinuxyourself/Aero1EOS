@@ -56,7 +56,7 @@ jobs:
           echo '{"files": []}' > stats.json
 
           # Filter for relevant source files
-          FILES=$(git diff --name-only $BEFORE_SHA $CURRENT_SHA -- '*.c' '*.h' '*.asm' '*.s' 'Makefile' '*.md' || echo "")
+          FILES=$(git diff --name-only $BEFORE_SHA $CURRENT_SHA -- '*.c' '*.h' '*.asm' '*.s' 'Makefile' '*.md' '*.cfg' || echo "")
           
           if [ ! -z "$FILES" ]; then
             for filename in $FILES; do
