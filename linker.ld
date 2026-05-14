@@ -4,7 +4,7 @@ SECTIONS {
     /* Standard load address for Multiboot kernels */
     . = 1M;
 
-		_kernel_end = .;
+		_kernel_start = .;
 
 
     /* The Multiboot header must be near the start of the file */
