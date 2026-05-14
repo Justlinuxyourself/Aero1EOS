@@ -19,20 +19,25 @@ LDFLAGS = -n -T linker.ld --build-id=none -z max-page-size=0x1000 --no-warn-rwx-
 all: $(PAYLOAD_H) $(ISO)
 
 # --- GRUB Payload Generation ---
-# This bakes the bootloader into a C header for the self-hosting installer
 $(PAYLOAD_H):
-	@echo "--- GENERATING GRUB PAYLOAD ---"
-	@# Generate the core image with required modules for disk/fs access
-	grub-mkimage -o grub_core.img -O i386-pc -p /boot/grub biosdisk part_msdos fat normal
-	@# Copy the standard MBR boot image (Path for Ubuntu/Debian)
+	@echo "--- GENERATING AUTO-BOOT GRUB PAYLOAD ---"
+	@# -c embeds the config, multiboot2 adds the command support
+	grub-mkimage -o grub_core.img -O i386-pc \
+		-c early_grub.cfg \
+		-p /boot/grub \
+		biosdisk part_msdos fat normal multiboot multiboot2
+	
+	@# Copy the standard MBR boot image
 	cp /usr/lib/grub/i386-pc/boot.img .
-	@# Convert binaries to C arrays
+	
+	@# Convert to C header
 	@echo "/* Auto-generated GRUB payload for AliOS Installer */" > $(PAYLOAD_H)
 	xxd -i boot.img >> $(PAYLOAD_H)
 	xxd -i grub_core.img >> $(PAYLOAD_H)
-	@# Clean up temporary binaries
+	
 	rm boot.img grub_core.img
 	@echo "--- PAYLOAD HEADER GENERATED ---"
+
 
 # --- Main Build Rules ---
 $(BIN): $(OBJ)
