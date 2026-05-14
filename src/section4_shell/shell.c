@@ -22,6 +22,7 @@ extern void play_sound();
 extern void nosound();
 extern void vga_set_cursor();
 extern void sleep();
+extern void cmd_install_os();
 extern void ide_read_sector_bytes(uint32_t lba, uint8_t* buffer);
 extern void ide_write_sector_bytes(uint32_t lba, uint8_t* buffer);
 extern void vga_set_color(unsigned char color);
@@ -1245,23 +1246,6 @@ void cmd_mkdir(char* args) {
 void aosdcserver() {
     vga_write("https://discord.gg/ymxpjGq9Gu");
 }
-/* --- Shell Logic --- */
-void shell_register_command(const char* name, const char* desc, command_func func) {
-    command_node_t* new_node = (command_node_t*)kmalloc(sizeof(command_node_t));
-    
-    int i = 0;
-    while(name[i] && i < 31) { new_node->name[i] = name[i]; i++; }
-    new_node->name[i] = '\0';
-
-    i = 0;
-    while(desc[i] && i < 63) { new_node->description[i] = desc[i]; i++; }
-    new_node->description[i] = '\0';
-
-    new_node->function = func;
-    new_node->next = command_list;
-    command_list = new_node;
-}
-
 void cmd_asma(char* args) {
     name_99_t names[] = {
         {"Ar-Rahman", "The Beneficent", "He who wills goodness and mercy for all His creatures."},
@@ -1287,6 +1271,26 @@ void cmd_asma(char* args) {
     vga_write("Meaning: "); vga_write(names[r].meaning);
     vga_write("\n-------------------------\n");
 }
+void install_aos() {
+  cmd_install_os();
+}
+/* --- Shell Logic --- */
+void shell_register_command(const char* name, const char* desc, command_func func) {
+    command_node_t* new_node = (command_node_t*)kmalloc(sizeof(command_node_t));
+    
+    int i = 0;
+    while(name[i] && i < 31) { new_node->name[i] = name[i]; i++; }
+    new_node->name[i] = '\0';
+
+    i = 0;
+    while(desc[i] && i < 63) { new_node->description[i] = desc[i]; i++; }
+    new_node->description[i] = '\0';
+
+    new_node->function = func;
+    new_node->next = command_list;
+    command_list = new_node;
+}
+
 
 void shell_init() {
     shell_register_command("help", "List all available commands", cmd_help);
@@ -1330,7 +1334,7 @@ void shell_init() {
     shell_register_command("gtdi", "Go To DIrectory", cmd_cd);
     shell_register_command("aosdcserv", "AliOS Discord Server", aosdcserver);
     shell_register_command("asma", "Random Name of Allah and its meaning", cmd_asma);
-
+    shell_register_command("install", "Install AliOS", install_aos);
 }
 
 void shell_dispatch(char* buffer) {
