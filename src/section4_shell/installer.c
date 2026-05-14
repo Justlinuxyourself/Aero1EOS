@@ -16,7 +16,9 @@ extern void ide_write_sector_bytes(uint32_t lba, uint8_t* buffer);
 extern void vga_write(const char* data);
 extern void vga_putchar(char c);
 extern void vga_set_color(unsigned char color);
-#include “grub_payload.h”
+
+#include "grub_payload.h"
+
 
 void cmd_install_os() {
     vga_set_color(0x0B); 
