@@ -1,80 +1,105 @@
-/* src/section4_shell/installer.c */
+#include "grub_payload.h"
 
+/* --- Types --- */
 typedef unsigned char  uint8_t;
 typedef unsigned short uint16_t;
 typedef unsigned int   uint32_t;
 
-// --- Externs from Linker ---
-extern uint8_t _kernel_start;
-extern uint8_t _kernel_end;
-
-// --- Externs from ATA Driver ---
-extern uint32_t ide_get_total_sectors();
-extern void ide_write_sector_bytes(uint32_t lba, uint8_t* buffer);
-extern void ide_read_sector_bytes(uint32_t lba, uint8_t* buffer); // Ensure this exists!
-
-// --- Externs from VGA Driver ---
+/* --- Externs from your Drivers --- */
 extern void vga_write(const char* data);
 extern void vga_putchar(char c);
 extern void vga_set_color(unsigned char color);
+extern void ide_read_sector_bytes(uint32_t lba, uint8_t* buffer);
+extern void ide_write_sector_bytes(uint32_t lba, uint8_t* buffer);
 
-#include "grub_payload.h"
+/**
+ * itoa
+ * Converts an integer to a string for display in AliOS.
+ */
+static void itoa(uint32_t n, char* s) {
+    uint32_t i = 0, j;
+    char tmp;
+    if (n == 0) s[i++] = '0';
+    while (n > 0) {
+        s[i++] = (n % 10) + '0';
+        n /= 10;
+    }
+    s[i] = '\0';
+    
+    // Reverse the string to get digits in correct order
+    for (j = 0; j < i / 2; j++) {
+        tmp = s[j];
+        s[j] = s[i - j - 1];
+        s[i - j - 1] = tmp;
+    }
+}
 
 void cmd_install_os() {
-    vga_set_color(0x0B); 
-    vga_write("\n[ AliOS Self-Hosting Installer ]\n");
-    vga_set_color(0x0F);
+    vga_set_color(0x0B); // Cyan
+    vga_write("\n[ AliOS 4.0 Self-Hosting Installer ]\n");
+    vga_set_color(0x0F); // White
 
-    uint32_t total_sectors = ide_get_total_sectors();
-    if (total_sectors == 0) {
-        vga_write("Error: No hard drive detected!\n");
+    // --- 1. BUILD SYSTEM CHECK ---
+    if (alios4_bin_len <= 1) {
+        vga_set_color(0x0C); // Red
+        vga_write("CRITICAL ERROR: Kernel payload is empty (1 byte)!\n");
+        vga_write("Fix: Run 'make clean' and then 'make' twice.\n");
         return;
     }
 
-    // --- 1. Write GRUB Stage 1 (Sector 0) Surgically ---
-    vga_write("Installing GRUB MBR... ");
-    
+    // --- 2. INSTALL GRUB MBR (SECTOR 0) ---
+    vga_write("Step 1: Installing GRUB MBR... ");
     uint8_t sector_0[512];
-    // Read the existing sector 0 to preserve the partition table
+    
     ide_read_sector_bytes(0, sector_0);
 
-    // Copy only the bootloader code (first 440 bytes)
-    // This leaves the partition table (446-510) untouched!
     for (int i = 0; i < 440; i++) {
         sector_0[i] = boot_img[i];
     }
 
-    // Ensure the MBR boot signature is valid
+    // Standard MBR Boot Signature
     sector_0[510] = 0x55;
     sector_0[511] = 0xAA;
 
     ide_write_sector_bytes(0, sector_0);
     vga_write("DONE\n");
 
-    // --- 2. Write GRUB Core (Starting at Sector 1) ---
-    vga_write("Writing GRUB Core... ");
+    // --- 3. INSTALL GRUB CORE (SECTOR 1+) ---
+    vga_write("Step 2: Writing GRUB Core... ");
     uint32_t core_sectors = (grub_core_img_len + 511) / 512;
     for (uint32_t i = 0; i < core_sectors; i++) {
         ide_write_sector_bytes(1 + i, &grub_core_img[i * 512]);
     }
     vga_write("DONE\n");
 
-    // --- 3. Write AliOS Kernel (Starting at Sector 2048) ---
-    vga_write("Writing AliOS Kernel (Sector 2048)... ");
+    // --- 4. INSTALL ALIOS KERNEL (SECTOR 2048) ---
+    // We start at 1MB (Sector 2048) to match the Blocklist config
+    vga_write("Step 3: Deploying Kernel to Sector 2048... ");
     
-    // Starting at 0x1000 where the Multiboot header is mapped
-    // CRITICAL: Use the embedded alios4_bin, NOT a memory pointer
-    uint8_t* kernel_data = alios4_bin; 
-    uint32_t kernel_size = alios4_bin_len;
-    uint32_t kernel_sectors = (kernel_size + 511) / 512;
+    uint32_t k_sectors = (alios4_bin_len + 511) / 512;
 
-    for (uint32_t i = 0; i < kernel_sectors; i++) {
-        ide_write_sector_bytes(2048 + i, kernel_data + (i * 512));
+    for (uint32_t i = 0; i < k_sectors; i++) {
+        // Write literal binary data from the embedded file payload
+        ide_write_sector_bytes(2048 + i, &alios4_bin[i * 512]);
+        
+        // Progress dot every 25 sectors
+        if (i % 25 == 0) vga_putchar('.');
     }
     vga_write(" DONE\n");
 
-    vga_set_color(0x0A);
-    vga_write("\nSUCCESS! AliOS 4.0 is now installed.\n");
-    vga_write("Remove the ISO and reboot from the disk.\n");
-    vga_set_color(0x1E);
+    // --- 5. SUCCESS SUMMARY ---
+    vga_set_color(0x0A); // Green
+    vga_write("\nSUCCESS! AliOS 4.0 is now on (hd0).\n");
+    vga_set_color(0x0F);
+    
+    vga_write("Reboot and type this into GRUB:\n");
+    vga_set_color(0x0E); // Yellow
+    vga_write("multiboot2 (hd0)2048+");
+    
+    char count_str[16];
+    itoa(k_sectors, count_str);
+    vga_write(count_str);
+    
+    vga_write("\nboot\n");
+    vga_set_color(0xE1);
 }
