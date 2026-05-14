@@ -63,15 +63,13 @@ void cmd_install_os() {
     vga_write("Writing AliOS Kernel (Sector 2048)... ");
     
     // Starting at 0x1000 where the Multiboot header is mapped
-    uint8_t* kernel_ptr = (uint8_t*)0x1000; 
-    uint32_t kernel_size = (uint32_t)&_kernel_end - 0x1000;
+    // CRITICAL: Use the embedded alios4_bin, NOT a memory pointer
+    uint8_t* kernel_data = alios4_bin; 
+    uint32_t kernel_size = alios4_bin_len;
     uint32_t kernel_sectors = (kernel_size + 511) / 512;
 
     for (uint32_t i = 0; i < kernel_sectors; i++) {
-        ide_write_sector_bytes(2048 + i, kernel_ptr + (i * 512));
-        
-        // Progress indicator
-        if (i % 50 == 0) vga_putchar('.');
+        ide_write_sector_bytes(2048 + i, kernel_data + (i * 512));
     }
     vga_write(" DONE\n");
 
