@@ -18,25 +18,22 @@ LDFLAGS = -n -T linker.ld --build-id=none -z max-page-size=0x1000 --no-warn-rwx-
 # The default rule now ensures the GRUB payload is generated BEFORE compiling C files
 all: $(PAYLOAD_H) $(ISO)
 
-# --- GRUB Payload Generation ---
-$(PAYLOAD_H):
-	@echo "--- GENERATING AUTO-BOOT GRUB PAYLOAD ---"
-	@# -c embeds the config, multiboot2 adds the command support
+# Update the payload rule to include the kernel binary
+$(PAYLOAD_H): $(BIN)
+	@echo "--- GENERATING PAYLOAD ---"
 	grub-mkimage -o grub_core.img -O i386-pc \
 		-c early_grub.cfg \
 		-p /boot/grub \
 		biosdisk part_msdos fat normal multiboot multiboot2
 	
-	@# Copy the standard MBR boot image
 	cp /usr/lib/grub/i386-pc/boot.img .
 	
-	@# Convert to C header
-	@echo "/* Auto-generated GRUB payload for AliOS Installer */" > $(PAYLOAD_H)
+	@echo "/* Auto-generated payload */" > $(PAYLOAD_H)
 	xxd -i boot.img >> $(PAYLOAD_H)
 	xxd -i grub_core.img >> $(PAYLOAD_H)
+	xxd -i $(BIN) >> $(PAYLOAD_H)  # <--- Embed the kernel itself!
 	
 	rm boot.img grub_core.img
-	@echo "--- PAYLOAD HEADER GENERATED ---"
 
 
 # --- Main Build Rules ---
