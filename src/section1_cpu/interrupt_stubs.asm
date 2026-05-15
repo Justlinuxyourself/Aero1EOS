@@ -93,13 +93,11 @@ exception_common_route:
     hlt
     jmp .dead_halt
 
-; --- The Lookup Array Table ---
-; This allows our C code to loop through and load all 32 exceptions cleanly.
 section .rodata
 align 8
 exception_table:
 %assign i 0
-%repr 32
+%rep 32
     dq exception_stub_%[i]
 %assign i i+1
-%endrepr
+%endrep
