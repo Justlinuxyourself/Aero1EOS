@@ -42,6 +42,7 @@ extern void play_sound(unsigned int freq);
 extern void vga_set_color(unsigned char color);
 extern void vga_set_attribute(unsigned char attribute);
 extern void sleep();
+extern void init_idt(void);
 int strcmp_custom(char* s1, char* s2) {
     int i = 0;
     while (s1[i] != '\0' || s2[i] != '\0') {
@@ -208,7 +209,8 @@ void kernel_main() {
     timer_init();
     log_ok("INIT TTYS...");
     vga_init_ttys();
-    vga_write("WELCOME TO ALIOS!!!\n");
+    log_ok("INIT IDT...");
+    init_idt();
     sleep_ms(1000);
     vga_clear();
     bootup_screen();
