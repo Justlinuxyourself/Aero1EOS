@@ -86,8 +86,11 @@ jobs:
       - name: Post Discord Report
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-          COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
+          # Automatically extract the top commit message into a shell variable
+          LATEST_MSG=$(git log -1 --pretty=%B)
+          export COMMIT_MSG="$LATEST_MSG"
+
           python3 << 'EOF'
           import json
           import os
@@ -95,7 +98,8 @@ jobs:
 
           def send_report():
               webhook_url = os.getenv('DISCORD_WEBHOOK')
-              commit_msg = os.getenv('COMMIT_MSG', 'Manual Update')
+              # If something goes catastrophically wrong with git, fall back safely
+              commit_msg = os.getenv('COMMIT_MSG', 'Manual Sync/Update')
               
               if not os.path.exists('stats.json'): return
               try:
@@ -103,7 +107,7 @@ jobs:
                       data = json.load(f)
               except: return
 
-              description = f"**Commit:** {commit_msg}\n\n"
+              description = f"**Commit Details:**\n{commit_msg}\n\n"
               
               if not data.get('files'):
                   description += "_No source changes._"
@@ -114,7 +118,6 @@ jobs:
                       if int(file['removed']) > 0: stats.append(f"-{file['removed']} removed")
                       if int(file['changed']) > 0: stats.append(f"~{file['changed']} changed")
                       
-                      # join the stats with a dot for a single-line look
                       stat_line = " | ".join(stats) if stats else "No line changes"
                       description += f"**`{file['name']}`**\n`{stat_line}`\n"
 
