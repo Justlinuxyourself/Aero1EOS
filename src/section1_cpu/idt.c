@@ -3,6 +3,18 @@
 extern void vga_set_color(unsigned char color);
 extern void vga_write(const char* data);
 extern void vga_putchar(char c);
+extern void update_hardware_cursor(int pos);
+
+// Independent TTY structure matching vga.c exactly
+typedef struct {
+    unsigned short* buffer;
+    int cursor_pos;
+    char command_buffer[80];
+    int buffer_idx;
+} tty_t;
+
+extern tty_t ttys[];
+extern int current_tty;
 
 // 64-bit IDT Entry structure layout
 typedef struct {
@@ -15,7 +27,7 @@ typedef struct {
     uint32_t reserved;
 } __attribute__((packed)) IdtEntry;
 
-// IDT Pointer structure for lidt instruction
+// IDT Pointer structure for lids instruction
 typedef struct {
     uint16_t limit;
     uint64_t base;
@@ -75,7 +87,7 @@ void init_idt() {
     for (int i = 0; i < 32; i++) {
         uint64_t addr = exception_table[i];
         idt[i].offset_low       = (uint16_t)(addr & 0xFFFF);
-        idt[i].selector         = 0x18;
+        idt[i].selector         = 0x18; // Fits 64-bit selector from boot.asm
         idt[i].ist              = 0;
         idt[i].type_attributes  = 0x8E;
         idt[i].offset_mid       = (uint16_t)((addr >> 16) & 0xFFFF);
@@ -88,30 +100,50 @@ void init_idt() {
 }
 
 void c_kernel_panic(CpuPanicState* state) {
+    // 1. Force color state variable to Crimson Red on Black (0x0C)
     vga_set_color(0x0C);
-    for (int i = 0; i < 80 * 25; i++) vga_putchar(' ');
 
-    vga_write("================================================================================\n");
-    vga_write("                   !!! CRITICAL KERNEL PANIC: ALIOS 4.0 !!!                     \n");
-    vga_write("================================================================================\n\n");
+    // 2. Clear out tracking cursor to prevent vga_write out-of-bounds corruption
+    ttys[current_tty].cursor_pos = 0;
+
+    // 3. HARDWARE RESET: Direct blast 0xB8000 video card memory to pure black base
+    volatile uint16_t* raw_vga_mem = (volatile uint16_t*)0xB8000;
+    uint16_t scary_cell = (0x0C << 8) | ' ';
     
-    vga_write(" CPU TRAPPED EXCEPTION: ");
+    for (int i = 0; i < 80 * 25; i++) {
+        raw_vga_mem[i] = scary_cell;
+        ttys[current_tty].buffer[i] = scary_cell; // Clear virtual TTY frame buffer too
+    }
+
+    // 4. Position the blinking hardware cursor completely off screen
+    update_hardware_cursor(2000);
+
+    // 5. Output scary industrial register telemetry dump
+    vga_write("################################################################################\n");
+    vga_write("                  CRITICAL HARDWARE FAULT DETECTED: ALIOS 4.0                  \n");
+    vga_write("################################################################################\n\n");
+    
+    vga_write("  [!!] SYSTEM ENGINE TRAPPED EXCEPTION: ");
     if (state->exception_vector < 32) {
         vga_write(exception_messages[state->exception_vector]);
     } else {
-        vga_write("Unknown System Hardware Glitch");
+        vga_write("UNKNOWN UNSTABLE HARDWARE GLITCH");
     }
     vga_write("\n\n");
     
-    vga_write("  Instruction Pointer (RIP):  "); print_hex64(state->rip); vga_write("\n");
-    vga_write("  Hardware Error Code:        "); print_hex64(state->hardware_error_code); vga_write("\n");
-    vga_write("  Fault Address State (CR2): "); print_hex64(state->cr2); vga_write("\n");
-    vga_write("  Page Directory Base (CR3): "); print_hex64(state->cr3); vga_write("\n\n");
+    vga_write("  PROCESSOR HALTED. CODE EXECUTION TERMINATED.\n");
+    vga_write("  --------------------------------------------------\n");
+    vga_write("  FAULT LOCATION (RIP):   "); print_hex64(state->rip); vga_write("\n");
+    vga_write("  HARDWARE ERROR CODE:    "); print_hex64(state->hardware_error_code); vga_write("\n");
+    vga_write("  PAGE FAULT ADDR (CR2):  "); print_hex64(state->cr2); vga_write("\n");
+    vga_write("  PAGE DIRECTORY (CR3):   "); print_hex64(state->cr3); vga_write("\n\n");
     
-    vga_write(" Registers Context Raw Dump:\n");
+    vga_write("  REGISTER STATE DUMP:\n");
     vga_write("  RAX: "); print_hex64(state->rax); vga_write("  RBX: "); print_hex64(state->rbx); vga_write("  RCX: "); print_hex64(state->rcx); vga_write("\n");
     vga_write("  RDX: "); print_hex64(state->rdx); vga_write("  RSI: "); print_hex64(state->rsi); vga_write("  RDI: "); print_hex64(state->rdi); vga_write("\n");
     vga_write("  RBP: "); print_hex64(state->rbp); vga_write("  R8:  "); print_hex64(state->r8);  vga_write("  R9:  "); print_hex64(state->r9);  vga_write("\n");
     vga_write("  R10: "); print_hex64(state->r10); vga_write("  R11: "); print_hex64(state->r11); vga_write("  R12: "); print_hex64(state->r12); vga_write("\n");
-    vga_write("================================================================================");
+    vga_write("################################################################################");
+
+    // Left vga_draw_status_bar() out entirely to keep it pristine full black!
 }
