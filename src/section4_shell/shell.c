@@ -1274,6 +1274,16 @@ void cmd_asma(char* args) {
 void install_aos() {
   cmd_install_os();
 }
+void cmd_divbyzero(char* args) {
+    volatile int x = 0;
+    volatile int y = 5; 
+    
+    vga_write("\n  [!] EXECUTING ILLEGAL INSTRUCTION: DIVIDE BY ZERO\n");    
+    volatile int result = y / x; 
+    
+    (void)result; 
+}
+
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
     command_node_t* new_node = (command_node_t*)kmalloc(sizeof(command_node_t));
@@ -1335,6 +1345,7 @@ void shell_init() {
     shell_register_command("aosdcserv", "AliOS Discord Server", aosdcserver);
     shell_register_command("asma", "Random Name of Allah and its meaning", cmd_asma);
     shell_register_command("install", "Install AliOS", install_aos);
+    shell_register_command("divbyzero", "DivbyZero", cmd_divbyzero);
 }
 
 void shell_dispatch(char* buffer) {
