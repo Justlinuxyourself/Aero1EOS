@@ -30,7 +30,9 @@ extern int cmos_get_sec();
 extern void sleep_ms();
 extern uint32_t ide_get_total_sectors();
 extern unsigned int get_uptime_ms();
-extern char wait_for_key();
+extern char wait_for_key()
+extern void cmd_start_gui();
+
 extern int strncmp(const char* s1, const char* s2, int n);
 int alifs_is_directory(char* name);
 // Simple PRNG state
@@ -1283,7 +1285,9 @@ void cmd_divbyzero(char* args) {
     
     (void)result; 
 }
-
+void gui() {
+  cmd_start_gui();
+}
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
     command_node_t* new_node = (command_node_t*)kmalloc(sizeof(command_node_t));
@@ -1346,12 +1350,15 @@ void shell_init() {
     shell_register_command("asma", "Random Name of Allah and its meaning", cmd_asma);
     shell_register_command("install", "Install AliOS", install_aos);
     shell_register_command("divbyzero", "DivbyZero", cmd_divbyzero);
+    shell_register_command("gui", "GUI", cmd_start_gui);
 }
 
 void shell_dispatch(char* buffer) {
     // If the user just hits enter, just print a new prompt on a new line
     if (strlen(buffer) == 0) {
-        vga_write("\n> ");
+        vga_write("\nAliOS:");
+        vga_write(current_path);
+        vga_write("> ");
         return;
     }
 
