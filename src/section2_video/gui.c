@@ -4,7 +4,7 @@
 #define SCREEN_WIDTH 320
 #define SCREEN_HEIGHT 200
 
-#include "../section1_cpu_io.h"
+#include "../section1_cpu/io.h"
 
 // Global Theme Background Colors (VGA DAC constraints: 0 to 63)
 static uint8_t bg_r = 12; 
