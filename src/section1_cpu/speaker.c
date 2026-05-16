@@ -13,16 +13,12 @@ typedef struct {
     int freq;
     int duration_ms; 
 } Note;
-
-// Your "Professional AliOS Startup" notes mapped to the new struct
 static Note startup_notes[] = {
-    {440, 150}, // A
-    {0,   20},  // Tiny gap so notes don't bleed
-    {554, 150}, // C#
-    {0,   20},
-    {659, 150}, // E
-    {0,   20},
-    {880, 300}, // High A
+    {880, 250}, // High note (A5)
+    {0,   30},  // Short gap
+    {659, 250}, // Middle note (E5)
+    {0,   30},  // Short gap
+    {554, 450}, // Lower, sustained note (C#5)
     {-1,  0}    // STOP
 };
 
