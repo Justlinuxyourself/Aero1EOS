@@ -4,6 +4,7 @@ extern void vga_set_color(unsigned char color);
 extern void vga_write(const char* data);
 extern void vga_putchar(char c);
 extern void update_hardware_cursor(int pos);
+extern void play_sound(unsigned int nFrequence);
 
 // Independent TTY structure matching vga.c exactly
 typedef struct {
@@ -98,6 +99,23 @@ void init_idt() {
     // Call native assembly instruction to bind this framework table to CPU
     __asm__ volatile("lidt %0" : : "m"(idt_ptr));
 }
+void kernel_panic_sound() {
+    // Slide frequency down from 2000Hz to 100Hz
+    for (int freq = 2000; freq > 100; freq -= 5) {
+        play_sound(freq);
+        for(volatile int i = 0; i < 200000; i++); // Fast delay for smooth sliding
+    }
+    
+    // Hold a flatline low drone for a moment
+    play_sound(80); 
+    for(volatile int i = 0; i < 50000000; i++);
+    
+    // Kill the sound and halt the CPU completely
+    nosound();
+    while(1) {
+        __asm__ volatile("cli; hlt"); 
+    }
+}
 
 void c_kernel_panic(CpuPanicState* state) {
     // 1. Force color state variable to Crimson Red on Black (0x0C)
@@ -145,5 +163,6 @@ void c_kernel_panic(CpuPanicState* state) {
     vga_write("  R10: "); print_hex64(state->r10); vga_write("  R11: "); print_hex64(state->r11); vga_write("  R12: "); print_hex64(state->r12); vga_write("\n");
     vga_write("################################################################################");
     vga_write("(hahaha looks whos cpu is fucked)");
+    kernel_panic_sound();
     // Left vga_draw_status_bar() out entirely to keep it pristine full black!
 }
