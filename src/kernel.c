@@ -36,6 +36,7 @@ extern void set_failed_attempts(unsigned char count);
 extern void sleep_ms(int ms);
 extern void trigger_ali_morse(); 
 extern void speaker_update();
+extern void startup_melody();
 extern tty_t ttys[];        
 extern int current_tty;     
 extern void play_sound(unsigned int freq);
@@ -214,6 +215,7 @@ void kernel_main() {
     sleep_ms(1000);
     vga_clear();
     bootup_screen();
+    startup_melody();
 
     sleep_ms(1000);
 
