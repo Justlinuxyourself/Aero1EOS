@@ -51,13 +51,34 @@ void cmd_install_os() {
     vga_write("Step 1: Installing GRUB MBR... ");
     uint8_t sector_0[512];
     
-    ide_read_sector_bytes(0, sector_0);
+    // FIX: Wipe the buffer completely clean first to remove real hardware garbage
+    for (int i = 0; i < 512; i++) {
+        sector_0[i] = 0x00;
+    }
 
-    for (int i = 0; i < 440; i++) {
+    // FIX: Copy all 512 bytes of GRUB's boot.img instead of truncating at 440
+    // This includes GRUB's internal jump offsets and safe empty structures
+    for (int i = 0; i < 512; i++) {
         sector_0[i] = boot_img[i];
     }
 
-    // Standard MBR Boot Signature
+    // FIX: Inject a guaranteed active partition entry so the physical BIOS doesn't skip it
+    sector_0[446] = 0x80; // Bootable flag (Active)
+    sector_0[447] = 0x01; // Starting Head
+    sector_0[448] = 0x01; // Starting Sector
+    sector_0[449] = 0x00; // Starting Cylinder
+    sector_0[450] = 0x83; // Linux/Raw filesystem type
+    sector_0[451] = 0xFE; // Ending Head
+    sector_0[452] = 0xFF; // Ending Sector
+    sector_0[453] = 0xFF; // Ending Cylinder
+    
+    // Starting LBA Sector (Sector 2048, where AliOS lives)
+    sector_0[454] = 0x00; 
+    sector_0[455] = 0x08; 
+    sector_0[456] = 0x00; 
+    sector_0[457] = 0x00;
+
+    // Force the standard boot signature explicitly just in case
     sector_0[510] = 0x55;
     sector_0[511] = 0xAA;
 
@@ -73,16 +94,11 @@ void cmd_install_os() {
     vga_write("DONE\n");
 
     // --- 4. INSTALL ALIOS KERNEL (SECTOR 2048) ---
-    // We start at 1MB (Sector 2048) to match the Blocklist config
     vga_write("Step 3: Deploying Kernel to Sector 2048... ");
-    
     uint32_t k_sectors = (alios4_bin_len + 511) / 512;
 
     for (uint32_t i = 0; i < k_sectors; i++) {
-        // Write literal binary data from the embedded file payload
         ide_write_sector_bytes(2048 + i, &alios4_bin[i * 512]);
-        
-        // Progress dot every 25 sectors
         if (i % 25 == 0) vga_putchar('.');
     }
     vga_write(" DONE\n");
@@ -90,7 +106,7 @@ void cmd_install_os() {
     // --- 5. SUCCESS SUMMARY ---
     vga_set_color(0x0A); // Green
     vga_write("\nSUCCESS! AliOS 4.0 is now on (hd0).\n");
-    vga_set_color(0x0F);
+    vga_set_color(0x0F); // White
     
     vga_write("Reboot and type this into GRUB:\n");
     vga_set_color(0x0E); // Yellow
@@ -101,5 +117,5 @@ void cmd_install_os() {
     vga_write(count_str);
     
     vga_write("\nboot\n");
-    vga_set_color(0xE1);
+    vga_set_color(0x1E); 
 }
