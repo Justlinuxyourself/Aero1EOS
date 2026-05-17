@@ -17,7 +17,6 @@ static int slider_g_y = 110;
 static int slider_b_y = 50;
 
 // Keyboard UI Navigation State Engine
-// Items: 0-5 are Apps, 6 is Red Slider, 7 is Green Slider, 8 is Blue Slider
 static int current_selection = 0; 
 static uint8_t is_dragging_slider = 0; 
 
@@ -45,7 +44,7 @@ static gui_app_t app_grid[6] = {
     {155, 110, 42, 35, "STAT"}
 };
 
-// Complete 5x7 Bitmap Font Table for the whole Alphabet (A-Z) and numbers (0-9)
+// Complete 5x7 Bitmap Font Table
 static const uint8_t font_alpha[38][7] = {
     {0x04, 0x0A, 0x11, 0x1F, 0x11, 0x11, 0x11}, // A
     {0x1E, 0x11, 0x11, 0x1E, 0x11, 0x11, 0x1E}, // B
@@ -86,7 +85,6 @@ static const uint8_t font_alpha[38][7] = {
     {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}  // [Space]
 };
 
-// Graphics Vector Assembly Primitives
 void draw_pixel(int x, int y, uint8_t color) {
     if (x >= 0 && x < SCREEN_WIDTH && y >= 0 && y < SCREEN_HEIGHT) {
         GUI_MEM[y * SCREEN_WIDTH + x] = color;
@@ -118,7 +116,7 @@ void draw_vline(int x, int start_y, int end_y, uint8_t color) {
 void draw_string(int x, int y, const char* str, uint8_t color) {
     for (int i = 0; str[i] != '\0'; i++) {
         char c = str[i];
-        int letter_idx = 37; // Default to space character
+        int letter_idx = 37; 
         
         if (c >= 'a' && c <= 'z') c -= 32;
         
@@ -147,9 +145,7 @@ void update_vga_background_color() {
     outb(0x3C9, bg_b);             
 }
 
-
 void execute_app(int slot) {
-    // APP 1: CALCULATOR
     if (slot == 0) {
         int count = 5;
         char count_str[2] = "5";
@@ -164,37 +160,34 @@ void execute_app(int slot) {
             
             while (!(inb(0x64) & 1));
             uint8_t key = inb(0x60);
-            if (key == 0x01) break; // ESC
-            if (key == 0x48 && count < 9) count++; // Up
-            if (key == 0x50 && count > 0) count--; // Down
+            if (key == 0x01) break; 
+            if (key == 0x48 && count < 9) count++; 
+            if (key == 0x50 && count > 0) count--; 
             for(volatile int d=0; d<10000; d++);
         }
     } 
-    // APP 2: AUDIO OSCILLATOR BEEP
     else if (slot == 1) {
-        uint16_t freq_divisor = 1193; // Generates roughly 1kHz tone
+        uint16_t freq_divisor = 1193; 
         draw_rect(15, 15, 290, 170, COLOR_BLACK);
         draw_string(25, 25, "AUDIO OSCILLATOR SPEAKER ACTIVE", COLOR_WHITE);
         draw_string(25, 40, "UP AND DOWN TUNES PITCh - SPACE OFF", COLOR_LIGHT_GRAY);
         
-        // Setup PIT Channel 2 Speaker Hardware Timer 
         outb(0x43, 0xB6);
         
         while (1) {
             outb(0x42, (uint8_t)(freq_divisor & 0xFF));
             outb(0x42, (uint8_t)((freq_divisor >> 8) & 0xFF));
-            outb(0x61, inb(0x61) | 3); // Sound on
+            outb(0x61, inb(0x61) | 3); 
             
             while (!(inb(0x64) & 1));
             uint8_t key = inb(0x60);
-            if (key == 0x01) break; // ESC
-            if (key == 0x48 && freq_divisor > 200) freq_divisor -= 100; // Pitch up
-            if (key == 0x50 && freq_divisor < 5000) freq_divisor += 100; // Pitch down
-            if (key == 0x39) outb(0x61, inb(0x61) & 0xFC); // Mute sound output
+            if (key == 0x01) break; 
+            if (key == 0x48 && freq_divisor > 200) freq_divisor -= 100; 
+            if (key == 0x50 && freq_divisor < 5000) freq_divisor += 100; 
+            if (key == 0x39) outb(0x61, inb(0x61) & 0xFC); 
         }
-        outb(0x61, inb(0x61) & 0xFC); // Safeguard Speaker Off
+        outb(0x61, inb(0x61) & 0xFC); 
     } 
-    // APP 3: CORE FAULT EXCEPTION TRAP
     else if (slot == 2) {
         draw_rect(15, 15, 290, 170, COLOR_BLACK);
         draw_string(25, 40, "TRAPPING CPU HANDLER VECTOR 0X00", COLOR_SLIDER_R);
@@ -204,19 +197,18 @@ void execute_app(int slot) {
         volatile int crash_trigger = 100 / zero_value;
         (void)crash_trigger;
     }
-    // APP 4: HEX STORAGE SECTOR FILE INSPECTOR
     else if (slot == 3) {
         draw_rect(15, 15, 290, 170, COLOR_BLACK);
-        draw_string(25, 25, "RAW KERNEL SECTOR MEMORY STREAM", COLOR_WHITE);
+        draw_string(25, 25, "RAW VIDEO MEMORY FILE INSPECTOR", COLOR_WHITE);
         
-        // Print raw hex layout configurations straight off BIOS video buffers
+        // FIXED: Point directly to live GUI Video Memory using exact size casting
         for (int row = 0; row < 6; row++) {
-            volatile uint8_t* ptr = (volatile uint8_t*)(0x10000 + (row * 4));
+            volatile uint8_t* ptr = (volatile uint8_t*)((uintptr_t)GUI_MEM + ((uintptr_t)row * 320));
             char hex_display[9] = "00000000";
             for (int b = 0; b < 4; b++) {
                 uint8_t val = ptr[b];
-                hex_display[b*2]   = '0' + (val >> 4);
-                hex_display[b*2+1] = '0' + (val & 0x0F);
+                hex_display[b*2]   = "0123456789ABCDEF"[val >> 4];
+                hex_display[b*2+1] = "0123456789ABCDEF"[val & 0x0F];
             }
             draw_string(35, 50 + (row * 15), hex_display, COLOR_SLIDER_G);
         }
@@ -224,7 +216,6 @@ void execute_app(int slot) {
             if (inb(0x64) & 1) { if (inb(0x60) == 0x01) break; }
         }
     }
-    // APP 5: RETRO PONG ACTION GAME
     else if (slot == 4) {
         int paddle_y = 70;
         int ball_x = 100, ball_y = 80;
@@ -234,33 +225,28 @@ void execute_app(int slot) {
             draw_rect(15, 15, 290, 170, COLOR_BLACK);
             draw_string(25, 22, "PONG GAME - UP/DOWN ARROWS", COLOR_WHITE);
             
-            // Render Entities
             draw_rect(20, paddle_y, 6, 30, COLOR_SELECTION);
             draw_rect(ball_x, ball_y, 4, 4, COLOR_WHITE);
             
-            // Physics Simulation Mechanics
             ball_x += ball_dx; ball_y += ball_dy;
             if (ball_y <= 40 || ball_y >= 170) ball_dy = -ball_dy;
             if (ball_x >= 280) ball_dx = -ball_dx;
             
-            // Paddle Collisions Check Bounds
             if (ball_x <= 26 && ball_y >= paddle_y && ball_y <= (paddle_y + 30)) {
                 ball_dx = -ball_dx;
             } else if (ball_x < 15) {
-                // Ball resets if missed
                 ball_x = 150; ball_y = 80;
             }
             
             if (inb(0x64) & 1) {
                 uint8_t key = inb(0x60);
-                if (key == 0x01) break; // Exit game
+                if (key == 0x01) break; 
                 if (key == 0x48 && paddle_y > 42) paddle_y -= 6;
                 if (key == 0x50 && paddle_y < 140) paddle_y += 6;
             }
             for (volatile int delay = 0; delay < 120000; delay++);
         }
     }
-    // APP 6: HARDWARE TELEMETRY STAT ENGINE
     else if (slot == 5) {
         draw_rect(15, 15, 290, 170, COLOR_BLACK);
         draw_string(25, 25, "ALIOS TELEMETRY SNAPSHOT MONITOR", COLOR_WHITE);
@@ -282,7 +268,6 @@ void render_interface() {
     draw_string(110, 12, "ALIOS SYSTEM", COLOR_WHITE);
     draw_string(125, 22, "SOLO DEV", COLOR_LIGHT_GRAY);
 
-    // Render out App Launcher Grid Layout 
     for (int i = 0; i < 6; i++) {
         uint8_t border_color = (current_selection == i) ? COLOR_SELECTION : COLOR_LIGHT_GRAY;
 
@@ -293,11 +278,9 @@ void render_interface() {
         draw_triangle_down(app_grid[i].x + (app_grid[i].w / 2), app_grid[i].y + app_grid[i].h + 8, 6, border_color);
     }
 
-    // Stylus Separator Handle Element
     draw_rect(215, 40, 6, 110, COLOR_WHITE);
     draw_pixel(217, 39, COLOR_BLACK); draw_pixel(217, 151, COLOR_BLACK);
 
-    // RGB Slider Track Control Engine Interfaces
     uint8_t r_knob_color = (current_selection == 6) ? COLOR_SELECTION : COLOR_WHITE;
     uint8_t g_knob_color = (current_selection == 7) ? COLOR_SELECTION : COLOR_WHITE;
     uint8_t b_knob_color = (current_selection == 8) ? COLOR_SELECTION : COLOR_WHITE;
@@ -320,6 +303,7 @@ void cmd_start_gui() {
     extern void set_gui_mode();
     extern void set_text_mode();
     extern void vga_clear();
+    extern void vga_write(const char* text);
 
     set_gui_mode();
     update_vga_background_color();
@@ -331,16 +315,17 @@ void cmd_start_gui() {
 
             if (scancode == 0x01) {
                 running = 0;
+                break; // FIXED: Immediately break out of loop to avoid rendering again!
             }
 
             if (is_dragging_slider) {
-                if (scancode == 0x48) { // Up Arrow
+                if (scancode == 0x48) { 
                     if (current_selection == 6 && slider_r_y > 30) { slider_r_y -= 4; bg_r = ((151 - slider_r_y) * 63) / 121; }
                     if (current_selection == 7 && slider_g_y > 30) { slider_g_y -= 4; bg_g = ((151 - slider_g_y) * 63) / 121; }
                     if (current_selection == 8 && slider_b_y > 30) { slider_b_y -= 4; bg_b = ((151 - slider_b_y) * 63) / 121; }
                     update_vga_background_color();
                 }
-                else if (scancode == 0x50) { // Down Arrow
+                else if (scancode == 0x50) { 
                     if (current_selection == 6 && slider_r_y < 151) { slider_r_y += 4; bg_r = ((151 - slider_r_y) * 63) / 121; }
                     if (current_selection == 7 && slider_g_y < 151) { slider_g_y += 4; bg_g = ((151 - slider_g_y) * 63) / 121; }
                     if (current_selection == 8 && slider_b_y < 151) { slider_b_y += 4; bg_b = ((151 - slider_b_y) * 63) / 121; }
@@ -351,21 +336,23 @@ void cmd_start_gui() {
                 }
             } 
             else {
-                if (scancode == 0x4D) { // Right Arrow
+                if (scancode == 0x4D) { 
                     if (current_selection < 8) current_selection++;
                 }
-                else if (scancode == 0x4B) { // Left Arrow
+                else if (scancode == 0x4B) { 
                     if (current_selection > 0) current_selection--;
                 }
-                else if (scancode == 0x50) { // Down Arrow
+                else if (scancode == 0x50) { 
                     if (current_selection >= 0 && current_selection <= 2) current_selection += 3;
                 }
-                else if (scancode == 0x48) { // Up Arrow
+                else if (scancode == 0x48) { 
                     if (current_selection >= 3 && current_selection <= 5) current_selection -= 3;
                 }
                 else if (scancode == 0x39 || scancode == 0x1C) { 
                     if (current_selection >= 0 && current_selection <= 5) {
                         execute_app(current_selection);
+                        // FIXED: Flush out the leftover ESC scancode so it doesn't close the entire GUI!
+                        while(inb(0x64) & 1) { inb(0x60); }
                     } else {
                         is_dragging_slider = 1; 
                     }
@@ -379,6 +366,5 @@ void cmd_start_gui() {
 
     set_text_mode();
     vga_clear();
-    vga_write("Returned to AliOS 4.0 Secure Terminal Shell Session.\n");
-    vga_write("> ");
+    vga_write("Returned to AliOS 4.0 Secure Terminal Shell Session, Press Enter.\n");
 }
