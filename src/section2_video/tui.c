@@ -3,15 +3,49 @@ All rights reserved.
 */
 #include "tui_video.h"
 #include "../section1_cpu/io.h"
-
-// Stubs linked from your system files
 extern void vga_draw_status_bar();
 extern void update_hardware_speaker(); // Volume tuner activator
-extern void launch_app_stub(int app_id);
-
+extern void cmd_neofetch(char* args);
+extern void todo_show();
+extern void cmd_ayah();
+extern void draw_custom_plane();
+extern void shell_lock();
 int current_selection = 0; // 0-5 for App grid, 6 for Volume Slider
 int is_dragging = 0;       // Keeps focus locked to slider values
 int slider_val = 5;        // Defaults midrange volume state
+
+void launch_app_stub(int app_id) {
+    // Clear screen before launching an app so it looks clean
+    vga_clear(); 
+    
+    switch(app_id) {
+        case 0: // Neofetch Info
+            cmd_neofetch(0);
+            break;
+        case 1: // To-Do List
+            todo_show();
+            break;
+        case 2: // Calculator
+            vga_write("Use 'calc' in the terminal terminal for now!\n");
+            break;
+        case 3: // Quran Ayah
+            cmd_ayah();
+            break;
+        case 4: // Plane Art
+            draw_custom_plane();
+            break;
+        case 5: // Lock Screen
+            shell_lock();
+            break;
+        default:
+            break;
+    }
+    
+    // Wait for a quick keypress before jumping straight back to the TUI dashboard loop
+    vga_write("\n[Press any key to return to Dashboard]");
+    wait_for_key(); 
+}
+
 void update_hardware_speaker() {
     // Map slider values (0 to 9) to actual frequencies (Hz)
     // 0 is mute, 1 is low bass, 9 is high pitch
