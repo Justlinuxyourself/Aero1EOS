@@ -26,7 +26,7 @@ void launch_app_stub(int app_id) {
             todo_show();
             break;
         case 2: // Calculator
-            vga_write("Use 'calc' in the terminal terminal for now!\n");
+            vga_write("Use 'calc' in the terminal for now!\n");
             break;
         case 3: // Quran Ayah
             cmd_ayah();
