@@ -1,148 +1,145 @@
+/* Copyright (c) 2026 Ali  
+All rights reserved.
+*/
 #include "tui_video.h"
 #include "../section1_cpu/io.h"
 
-static int current_selection = 0;
-static int slider_val = 5; // Valid steps: 0 to 9
-static uint8_t is_dragging = 0;
+// Stubs linked from your system files
+extern void vga_draw_status_bar();
+extern void update_hardware_speaker(); // Volume tuner activator
+extern void launch_app_stub(int app_id);
 
-static const char* app_labels[6] = {
-    "CALCULATOR", "AUDIO OSC ", "FAULT TRAP",
-    "FILE INSP ", "PONG GAME ", "TELEMETRY "
-};
+int current_selection = 0; // 0-5 for App grid, 6 for Volume Slider
+int is_dragging = 0;       // Keeps focus locked to slider values
+int slider_val = 5;        // Defaults midrange volume state
+void update_hardware_speaker() {
+    // Map slider values (0 to 9) to actual frequencies (Hz)
+    // 0 is mute, 1 is low bass, 9 is high pitch
+    uint32_t frequencies[] = {
+        0,    // 0: Mute / Off
+        150,  // 1: Very Low
+        300,  // 2
+        450,  // 3
+        600,  // 4: Midtone
+        750,  // 5
+        900,  // 6
+        1050, // 7
+        1200, // 8
+        1350  // 9: High Pitch
+    };
 
-// Maps slider step (0-9) to a real audio frequency (Hz)
-static const uint16_t pitch_frequencies[10] = {
-    261, // 0: C4
-    294, // 1: D4
-    329, // 2: E4
-    349, // 3: F4
-    392, // 4: G4
-    440, // 5: A4 (Default Anchor)
-    494, // 6: B4
-    523, // 7: C5
-    587, // 8: D5
-    659  // 9: E5
-};
+    uint32_t freq = frequencies[slider_val];
 
-// Updates PIT timer hardware counters directly
-static void update_hardware_speaker() {
-    if (is_dragging) {
-        uint16_t target_hz = pitch_frequencies[slider_val];
-        // 1193182 Hz is the internal base oscillator speed of the Intel 8253/8254 PIT chip
-        uint16_t divisor = 1193182 / target_hz;
-
-        outb(0x43, 0xB6); // Command register: Channel 2, LSB/MSB, Square Wave Mode
-        outb(0x42, (uint8_t)(divisor & 0xFF));        // Send Low Byte
-        outb(0x42, (uint8_t)((divisor >> 8) & 0xFF)); // Send High Byte
-
-        // Flip the gate bits on System Control Port B to connect PIT to the speaker
-        uint8_t speaker_state = inb(0x61);
-        if ((speaker_state & 3) != 3) {
-            outb(0x61, speaker_state | 3); // Force Bits 0 and 1 high to un-mute
-        }
+    if (freq == 0) {
+        nosound(); // Turn off the speaker if slider is 0
     } else {
-        // Disconnect the oscillator lines to mute the speaker channel cleanly
-        outb(0x61, inb(0x61) & 0xFC);
+        play_sound(freq); // Play the corresponding pitch
     }
 }
 
-static void tui_render_all() {
+static void render_dashboard() {
     tui_clear(ATTR_DEFAULT);
 
-    tui_draw_string(27, 1, "=== ALIX64 4.0 TUI DESKTOP ===", ATTR_BANNER); 
-    tui_draw_string(32, 2, "INDEPENDENT CORE OS", ATTR_DEFAULT);
+    // 1. Top Title bar banner
+    for (int i = 0; i < VGA_WIDTH; i++) {
+        tui_print_at(i, 0, " ", ATTR_HEADER);
+    }
+    tui_print_at(26, 0, "AliOS 4.0 - Custom TUI Notebook", ATTR_HEADER);
 
-    // App Grid Layout Calculation
+    // 2. Generate 2x3 grid matrix for Applications (IDs 0 to 5)
+    const char* app_names[] = {
+        "Neofetch Info", "To-Do List", "Calculator",
+        "Quran Ayah",    "Plane Art",  "Lock Screen"
+    };
+
+    int box_w = 22, box_h = 4;
+    int start_x = 5, start_y = 3;
+
     for (int i = 0; i < 6; i++) {
         int col = i % 3;
         int row = i / 3;
-        int x = 6 + (col * 24);
-        int y = 5 + (row * 6);
+        int x = start_x + (col * (box_w + 3));
+        int y = start_y + (row * (box_h + 2));
 
-        uint8_t box_attr = (current_selection == i) ? ATTR_SELECTION : ATTR_BORDER;
+        uint8_t attr = (current_selection == i) ? ATTR_SELECTED : ATTR_DEFAULT;
+        tui_draw_box(x, y, box_w, box_h, app_names[i], attr);
         
-        tui_draw_window(x, y, 20, 5, (current_selection == i) ? "ACTIVE" : "LAUNCH", box_attr);
-        tui_draw_string(x + 5, y + 2, app_labels[i], (current_selection == i) ? ATTR_SELECTION : ATTR_APP_BOX);
+        if (current_selection == i) {
+            tui_print_at(x + 2, y + 2, "-> Press ENTER", ATTR_ACCENT);
+        } else {
+            tui_print_at(x + 4, y + 2, "Launch App", ATTR_DEFAULT);
+        }
     }
 
-    // Parameters Control Block Layout
-    tui_draw_window(8, 17, 64, 5, "SYSTEM ATTRIBUTES Panel", ATTR_BORDER);
-    tui_draw_string(12, 19, "SPEAKER OSC PITCH:", ATTR_DEFAULT);
+    // 3. Audio Controller Slider Block (ID 6)
+    int slider_y = 17;
+    uint8_t slider_attr = (current_selection == 6) ? ATTR_SELECTED : ATTR_DEFAULT;
     
-    uint8_t slider_attr = (current_selection == 6) ? ATTR_SELECTION : ATTR_DEFAULT;
-    tui_draw_string(32, 19, "[----------]", slider_attr);
+    tui_draw_box(5, slider_y, 70, 5, "System Hardware Volume Level Control", slider_attr);
     
-    uint8_t knob_attr = (is_dragging) ? ATTR_SELECTION : ATTR_SLIDER; 
-    tui_draw_char(33 + slider_val, 19, (char)0xDB, knob_attr); // Render Knob block: █
-
-    if (is_dragging) {
-        tui_draw_string(46, 19, "< PITCH LIVE TUNING >", ATTR_BANNER);
+    // Draw visual graphical trackbar scale
+    tui_print_at(10, slider_y + 2, "Volume Bar: [", slider_attr);
+    for (int v = 0; v < 10; v++) {
+        if (v == slider_val) {
+            tui_print_at(23 + v, slider_y + 2, "O", ATTR_ACCENT); // Indicator slider node
+        } else {
+            tui_print_at(23 + v, slider_y + 2, "-", slider_attr);
+        }
     }
+    tui_print_at(33, slider_y + 2, "]", slider_attr);
 
-    tui_draw_string(2, 23, "NAVIGATE: Arrow Keys | ACTIVATE: Enter/Spacebar", ATTR_FOOTER);
-    tui_draw_string(2, 24, "EXIT ENVIRONMENT: Press Escape (ESC)", ATTR_FOOTER);
-}
-
-static void launch_app_stub(int slot) {
-    tui_clear(ATTR_DEFAULT);
-    tui_draw_window(15, 8, 50, 7, "EXECUTION LAUNCHER", ATTR_BORDER);
-    tui_draw_string(18, 10, "TARGET ACTIVE:", ATTR_DEFAULT);
-    tui_draw_string(33, 10, app_labels[slot], ATTR_BANNER);
-    tui_draw_string(18, 12, "Press ANY key to drop back to desktop...", ATTR_APP_BOX);
-
-    for (volatile int d = 0; d < 2000000; d++);
-
-    // Flush and wait for keypress down
-    while (!(inb(0x64) & 1));
-    inb(0x60); 
-
-    while (inb(0x64) & 1) { inb(0x60); }
+    // Instruction dynamic tips line
+    if (current_selection == 6) {
+        if (is_dragging) {
+            tui_print_at(40, slider_y + 2, "<- -> Adjust | ENTER to Save", ATTR_ACCENT);
+        } else {
+            tui_print_at(40, slider_y + 2, "Press ENTER/SPACE to adjust tuning", ATTR_DEFAULT);
+        }
+    } else {
+        tui_print_at(10, 23, "Use Arrow Keys to Navigate Grid Selection System", ATTR_DEFAULT);
+    }
 }
 
 void cmd_start_gui() {
-    extern void vga_clear();
-    extern void vga_write(const char* text);
-
-    volatile int running = 1;
+    int running = 1;
+    
+    // Keep internal screen clean on startup
+    tui_clear(ATTR_DEFAULT);
 
     while (running) {
-        tui_render_all();
+        render_dashboard();
+        vga_draw_status_bar(); // Keeps time ticking right at the bottom edge
 
-        // Wait for keyboard input
-        while (!(inb(0x64) & 1));
-        uint8_t scancode = inb(0x60);
-        
-        // 1. Skip all key release break codes globally
-        if (scancode & 0x80) {
-            continue; 
+        // Wait for hardware register scancode availability
+        while (!(inb(0x64) & 0x01)) {
+            // Spin loop hook keeping status engine operational
+            vga_draw_status_bar();
         }
-        
-        // 2. Process Global Escape Key
-        if (scancode == 0x01) { // ESC
+
+        unsigned char scancode = inb(0x60);
+
+        // Global escape key check to exit shell straight back to command line terminal
+        if (scancode == 0x01) { 
             running = 0;
-            is_dragging = 0;
-            update_hardware_speaker(); // Turn off tone
             break;
         }
 
-        // 3. UI Modes Controller Split
+        // Split Controller logic handling based on Slider state focus locks
         if (is_dragging) {
-            // Slider Mode Controls
-            if (scancode == 0x4B && slider_val > 0) { 
-                slider_val--;      
-                update_hardware_speaker(); 
+            if (scancode == 0x4B && slider_val > 0) { // Left arrow
+                slider_val--;
+                 update_hardware_speaker();
             }
-            else if (scancode == 0x4D && slider_val < 9) { 
-                slider_val++;      
-                update_hardware_speaker(); 
+            else if (scancode == 0x4D && slider_val < 9) { // Right arrow
+                slider_val++;
+                 update_hardware_speaker();
             }
-            else if (scancode == 0x39 || scancode == 0x1C) { // Space or Enter releases tuning
-                is_dragging = 0;
-                update_hardware_speaker(); 
+            else if (scancode == 0x1C || scancode == 0x39) { // Enter or Space bar
+                is_dragging = 0; // Release lock focus back to navigation grid system
             }
         } 
         else {
-            // Normal Dashboard Navigation Mode
+            // Regular Navigation Track grid modes mapping layout matrix
             if (scancode == 0x4D) { // Right Arrow
                 if (current_selection < 6) current_selection++;
             }
@@ -157,23 +154,17 @@ void cmd_start_gui() {
                 if (current_selection == 6) current_selection = 3;
                 else if (current_selection >= 3) current_selection -= 3;
             }
-            else if (scancode == 0x39 || scancode == 0x1C) { // Space or Enter Selection Activation
+            else if (scancode == 0x1C || scancode == 0x39) { // Enter or Space bar input
                 if (current_selection >= 0 && current_selection <= 5) {
-                    // Selection is over an app box! Launch it safely.
+                    // Instantly execute target launcher routine
                     launch_app_stub(current_selection);
                 } 
                 else if (current_selection == 6) {
-                    // Selection is on the slider track! Lock focus.
-                    is_dragging = 1;
-                    update_hardware_speaker(); 
+                    is_dragging = 1; // Capture interactive focus lock onto the scale element
                 }
             }
         }
-        
-        for (volatile int d = 0; d < 30000; d++);
     }
 
-    tui_clear(ATTR_DEFAULT);
-    vga_clear();
-    vga_write("Returned to AliOS Shell, Press Enter.\n");
+    tui_clear(0xE1); 
 }
