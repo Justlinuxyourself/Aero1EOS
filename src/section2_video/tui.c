@@ -109,7 +109,9 @@ void cmd_start_gui() {
 
         while (!(inb(0x64) & 1));
         uint8_t scancode = inb(0x60);
-
+        if (scancode & 0x80) {
+            continue; 
+        }
         if (scancode == 0x01) { // ESC
             running = 0;
             is_dragging = 0;
