@@ -200,5 +200,5 @@ void cmd_start_gui() {
         }
     }
 
-    tui_clear(0xE1); 
+    tui_clear(0x1E); 
 }
