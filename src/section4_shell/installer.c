@@ -11,7 +11,7 @@ extern void vga_putchar(char c);
 extern void vga_set_color(unsigned char color);
 extern void ide_read_sector_bytes(uint32_t lba, uint8_t* buffer);
 extern void ide_write_sector_bytes(uint32_t lba, uint8_t* buffer);
-
+extern void cmd_disk_wipe();
 /**
  * itoa
  * Converts an integer to a string for display in AliOS.
@@ -46,8 +46,9 @@ void cmd_install_os() {
         vga_write("Fix: Run 'make clean' and then 'make' twice.\n");
         return;
     }
-
-    // --- 2. INSTALL GRUB MBR (SECTOR 0) ---
+    // --- 2. WIPE DISK --- 
+    cmd_disk_wipe();
+    // --- 3. INSTALL GRUB MBR (SECTOR 0) ---
     vga_write("Step 1: Installing GRUB MBR... ");
     uint8_t sector_0[512];
     
@@ -85,7 +86,7 @@ void cmd_install_os() {
     ide_write_sector_bytes(0, sector_0);
     vga_write("DONE\n");
 
-    // --- 3. INSTALL GRUB CORE (SECTOR 1+) ---
+    // --- 4. INSTALL GRUB CORE (SECTOR 1+) ---
     vga_write("Step 2: Writing GRUB Core... ");
     uint32_t core_sectors = (grub_core_img_len + 511) / 512;
     for (uint32_t i = 0; i < core_sectors; i++) {
@@ -93,7 +94,7 @@ void cmd_install_os() {
     }
     vga_write("DONE\n");
 
-    // --- 4. INSTALL ALIOS KERNEL (SECTOR 2048) ---
+    // --- 5. INSTALL ALIOS KERNEL (SECTOR 2048) ---
     vga_write("Step 3: Deploying Kernel to Sector 2048... ");
     uint32_t k_sectors = (alios4_bin_len + 511) / 512;
 
@@ -103,7 +104,7 @@ void cmd_install_os() {
     }
     vga_write(" DONE\n");
 
-    // --- 5. SUCCESS SUMMARY ---
+    // --- 6. SUCCESS SUMMARY ---
     vga_set_color(0x0A); // Green
     vga_write("\nSUCCESS! AliOS 4.0 is now on (hd0).\n");
     vga_set_color(0x0F); // White
