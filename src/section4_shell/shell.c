@@ -1284,9 +1284,6 @@ void cmd_divbyzero(char* args) {
     
     (void)result; 
 }
-void gui() {
-  cmd_start_gui();
-}
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
     command_node_t* new_node = (command_node_t*)kmalloc(sizeof(command_node_t));
@@ -1349,7 +1346,6 @@ void shell_init() {
     shell_register_command("asma", "Random Name of Allah and its meaning", cmd_asma);
     shell_register_command("install", "Install AliOS", install_aos);
     shell_register_command("divbyzero", "DivbyZero", cmd_divbyzero);
-    shell_register_command("gui", "GUI", cmd_start_gui);
 }
 
 void shell_dispatch(char* buffer) {
