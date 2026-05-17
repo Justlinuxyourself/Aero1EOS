@@ -52,7 +52,7 @@ static void tui_render_all() {
     tui_draw_string(27, 1, "=== ALIX64 4.0 TUI DESKTOP ===", ATTR_BANNER); 
     tui_draw_string(32, 2, "INDEPENDENT CORE OS", ATTR_DEFAULT);
 
-    // App Grid
+    // App Grid Layout Calculation
     for (int i = 0; i < 6; i++) {
         int col = i % 3;
         int row = i / 3;
@@ -92,6 +92,7 @@ static void launch_app_stub(int slot) {
 
     for (volatile int d = 0; d < 2000000; d++);
 
+    // Flush and wait for keypress down
     while (!(inb(0x64) & 1));
     inb(0x60); 
 
@@ -107,53 +108,64 @@ void cmd_start_gui() {
     while (running) {
         tui_render_all();
 
+        // Wait for keyboard input
         while (!(inb(0x64) & 1));
         uint8_t scancode = inb(0x60);
+        
+        // 1. Skip all key release break codes globally
         if (scancode & 0x80) {
             continue; 
         }
+        
+        // 2. Process Global Escape Key
         if (scancode == 0x01) { // ESC
             running = 0;
             is_dragging = 0;
-            update_hardware_speaker(); // Safeguard: turn sound off
+            update_hardware_speaker(); // Turn off tone
             break;
         }
 
+        // 3. UI Modes Controller Split
         if (is_dragging) {
+            // Slider Mode Controls
             if (scancode == 0x4B && slider_val > 0) { 
                 slider_val--;      
-                update_hardware_speaker(); // Update audio frequency live on step drop
+                update_hardware_speaker(); 
             }
-            if (scancode == 0x4D && slider_val < 9) { 
+            else if (scancode == 0x4D && slider_val < 9) { 
                 slider_val++;      
-                update_hardware_speaker(); // Update audio frequency live on step climb
+                update_hardware_speaker(); 
             }
-            if (scancode == 0x39 || scancode == 0x1C) { // Space or Enter
+            else if (scancode == 0x39 || scancode == 0x1C) { // Space or Enter releases tuning
                 is_dragging = 0;
-                update_hardware_speaker(); // Turns off the oscillator lines when released
+                update_hardware_speaker(); 
             }
         } 
         else {
-            if (scancode == 0x4D) { 
+            // Normal Dashboard Navigation Mode
+            if (scancode == 0x4D) { // Right Arrow
                 if (current_selection < 6) current_selection++;
             }
-            else if (scancode == 0x4B) { 
+            else if (scancode == 0x4B) { // Left Arrow
                 if (current_selection > 0) current_selection--;
             }
-            else if (scancode == 0x50) { 
+            else if (scancode == 0x50) { // Down Arrow
                 if (current_selection <= 2) current_selection += 3;
                 else if (current_selection <= 5) current_selection = 6;
             }
-            else if (scancode == 0x48) { 
+            else if (scancode == 0x48) { // Up Arrow
                 if (current_selection == 6) current_selection = 3;
                 else if (current_selection >= 3) current_selection -= 3;
             }
-            else if (scancode == 0x39 || scancode == 0x1C) { 
-                if (current_selection == 6) {
-                    is_dragging = 1;
-                    update_hardware_speaker(); // Immediately fire tone upon selection hook
-                } else {
+            else if (scancode == 0x39 || scancode == 0x1C) { // Space or Enter Selection Activation
+                if (current_selection >= 0 && current_selection <= 5) {
+                    // Selection is over an app box! Launch it safely.
                     launch_app_stub(current_selection);
+                } 
+                else if (current_selection == 6) {
+                    // Selection is on the slider track! Lock focus.
+                    is_dragging = 1;
+                    update_hardware_speaker(); 
                 }
             }
         }
