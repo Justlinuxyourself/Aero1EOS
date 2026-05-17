@@ -27,6 +27,7 @@ jobs:
             xorriso mtools grub-common grub-pc-bin cloc jq
 
       - name: Build Kernel and ISO
+        id: build_step
         run: |
           make clean
           make 
@@ -48,6 +49,8 @@ jobs:
 
       - name: Generate Statistics
         id: stats
+        # Only run stats if the build actually worked
+        if: success()
         run: |
           # Compare the last commit to its parent
           BEFORE_SHA="HEAD~1"
@@ -84,8 +87,11 @@ jobs:
           fi
 
       - name: Post Discord Report
+        # CRITICAL: This makes the step run even if building or releasing crashed!
+        if: always()
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          BUILD_STATUS: ${{ steps.build_step.outcome }}
         run: |
           # Automatically extract the top commit message into a shell variable
           LATEST_MSG=$(git log -1 --pretty=%B)
@@ -98,35 +104,45 @@ jobs:
 
           def send_report():
               webhook_url = os.getenv('DISCORD_WEBHOOK')
-              # If something goes catastrophically wrong with git, fall back safely
               commit_msg = os.getenv('COMMIT_MSG', 'Manual Sync/Update')
+              build_status = os.getenv('BUILD_STATUS', 'failure')
               
-              if not os.path.exists('stats.json'): return
-              try:
-                  with open('stats.json', 'r') as f:
-                      data = json.load(f)
-              except: return
-
-              description = f"**Commit Details:**\n{commit_msg}\n\n"
-              
-              if not data.get('files'):
-                  description += "_No source changes._"
+              # Set up title, color, and descriptions based on success/failure
+              if build_status == 'success':
+                  title = "AliOS Build Successful! HELL YEA-🦅"
+                  color = 2326507 # Greenish-Blue
+                  description = f"**Commit Details:**\n{commit_msg}\n\n"
+                  
+                  if not os.path.exists('stats.json'):
+                      description += "_No source changes._"
+                  else:
+                      try:
+                          with open('stats.json', 'r') as f:
+                              data = json.load(f)
+                          if not data.get('files'):
+                              description += "_No source changes._"
+                          else:
+                              for file in data['files']:
+                                  stats = []
+                                  if int(file['added']) > 0: stats.append(f"+{file['added']} added")
+                                  if int(file['removed']) > 0: stats.append(f"-{file['removed']} removed")
+                                  if int(file['changed']) > 0: stats.append(f"~{file['changed']} changed")
+                                  
+                                  stat_line = " | ".join(stats) if stats else "No line changes"
+                                  description += f"**`{file['name']}`**\n`{stat_line}`\n"
+                      except:
+                          description += "_Stats generation failed._"
               else:
-                  for file in data['files']:
-                      stats = []
-                      if int(file['added']) > 0: stats.append(f"+{file['added']} added")
-                      if int(file['removed']) > 0: stats.append(f"-{file['removed']} removed")
-                      if int(file['changed']) > 0: stats.append(f"~{file['changed']} changed")
-                      
-                      stat_line = " | ".join(stats) if stats else "No line changes"
-                      description += f"**`{file['name']}`**\n`{stat_line}`\n"
+                  title = "Build Failed! ☹️☹️☹️ Ali is Suffering Right now"
+                  color = 15158332 # Warning Red
+                  description = f"**Failed Commit:**\n{commit_msg}\n\nCheck the GitHub Actions tab to inspect the GCC/NASM compiler logs."
 
               payload = {
                   "content": "<@&1503391410785882225>",
                   "embeds": [{
-                      "title": "AliOS Build Successful! HELL YEA-🦅",
+                      "title": title,
                       "description": description,
-                      "color": 2326507
+                      "color": color
                   }]
               }
               requests.post(webhook_url, json=payload)
