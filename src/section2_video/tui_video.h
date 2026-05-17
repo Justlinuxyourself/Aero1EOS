@@ -1,24 +1,24 @@
+/* Copyright (c) 2026 Ali  
+All rights reserved.
+*/
 #ifndef TUI_VIDEO_H
 #define TUI_VIDEO_H
 
 #include <stdint.h>
 
-#define COLS 80
-#define ROWS 24
+#define VGA_WIDTH 80
+#define VGA_HEIGHT 25
+#define VGA_MEM_ADDR 0xB8000
 
-// Base Color Scheme Definitions (VGA Standard text mode attributes)
-#define ATTR_DEFAULT      0x1E // Blue on Yellow
-#define ATTR_SELECTION    0x70 // Inverted: Black on Light Gray
-#define ATTR_BORDER       0x09 // Light Blue on Black
-#define ATTR_SLIDER       0x0C // Light Red on Black
-#define ATTR_APP_BOX      0x0F // Bright White on Black
-#define ATTR_BANNER       0x0E // Yellow on Black
-#define ATTR_FOOTER       0x0A // Light Green on Black
+// AliOS Notebook Design Colors
+#define ATTR_DEFAULT 0x1E      // Yellow text on Blue background
+#define ATTR_SELECTED 0x70     // Inverted: Black text on Light Gray
+#define ATTR_HEADER 0x1F       // White text on Blue background
+#define ATTR_ACCENT 0x1B       // Cyan text on Blue background
 
-// Function Prototypes
 void tui_clear(uint8_t attribute);
-void tui_draw_char(int x, int y, char c, uint8_t attribute);
-void tui_draw_string(int x, int y, const char* str, uint8_t attribute);
-void tui_draw_window(int start_x, int start_y, int w, int h, const char* title, uint8_t attr);
+void tui_print_at(int x, int y, const char* str, uint8_t attribute);
+void tui_draw_box(int x, int y, int width, int height, const char* title, uint8_t attribute);
+void tui_set_cursor_hidden(int hidden);
 
 #endif
