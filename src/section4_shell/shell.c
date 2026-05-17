@@ -31,7 +31,6 @@ extern void sleep_ms();
 extern uint32_t ide_get_total_sectors();
 extern unsigned int get_uptime_ms();
 extern char wait_for_key();
-extern void cmd_start_gui();
 extern int strncmp(const char* s1, const char* s2, int n);
 int alifs_is_directory(char* name);
 // Simple PRNG state
