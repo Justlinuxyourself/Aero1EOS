@@ -74,6 +74,38 @@ typedef struct {
     int ayah;
     const char* text;
 } ayah_t;
+// i hope this works
+
+#define QR_SIZE 25
+
+// 1 = Black block, 0 = White space
+const unsigned char alios_discord_qr[QR_SIZE][QR_SIZE] = {
+    {1,1,1,1,1,1,1,0,1,1,1,0,0,0,1,0,1,0,1,1,1,1,1,1,1},
+    {1,0,0,0,0,0,1,0,1,0,0,1,1,1,0,0,0,0,1,0,0,0,0,0,1},
+    {1,0,1,1,1,0,1,0,0,1,1,1,0,1,1,0,1,0,1,0,1,1,1,0,1},
+    {1,0,1,1,1,0,1,0,1,0,0,0,1,0,0,1,0,0,1,0,1,1,1,0,1},
+    {1,0,1,1,1,0,1,0,0,1,0,1,0,1,0,0,1,0,1,0,1,1,1,0,1},
+    {1,0,0,0,0,0,1,0,0,0,1,1,1,1,1,0,1,0,1,0,0,0,0,0,1},
+    {1,1,1,1,1,1,1,0,1,0,1,0,1,0,1,0,1,0,1,1,1,1,1,1,1},
+    {0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+    {1,1,1,1,1,1,0,0,0,1,0,0,1,1,0,1,1,1,0,1,0,1,0,1,0},
+    {0,0,0,0,0,0,1,0,1,1,1,1,0,0,1,0,0,1,0,0,0,0,1,0,1},
+    {1,0,1,1,1,0,0,1,0,0,0,1,0,1,0,1,0,0,1,1,1,1,0,1,0},
+    {1,1,0,1,0,1,1,0,1,1,0,0,1,0,0,1,1,1,0,0,0,0,0,0,0},
+    {1,0,0,0,1,1,0,1,1,1,1,0,0,1,0,1,1,1,1,1,1,1,1,1,1},
+    {1,0,1,1,1,0,1,1,0,0,0,1,1,0,0,1,0,0,0,1,0,0,0,1,1},
+    {1,1,0,1,0,1,0,0,1,1,0,1,0,1,1,0,1,0,0,1,1,1,0,1,1},
+    {1,0,1,1,1,1,1,1,0,0,1,0,0,1,0,0,0,1,1,1,1,1,1,1,1},
+    {1,1,0,0,0,0,1,1,1,1,0,1,1,1,1,1,1,1,0,0,0,0,1,1,1},
+    {0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,1,0,1,1,0,1,0,0,0,0},
+    {1,1,1,1,1,1,1,0,1,1,1,0,1,1,0,0,0,1,0,1,1,0,0,0,1},
+    {1,0,0,0,0,0,1,0,0,1,0,1,0,0,1,1,1,1,1,1,1,0,1,1,0},
+    {1,0,1,1,1,0,1,0,1,0,0,0,1,1,0,1,1,1,0,0,1,1,1,0,0},
+    {1,0,1,1,1,0,1,0,1,1,0,1,1,0,0,1,0,1,1,1,0,0,0,1,0},
+    {1,0,1,1,1,0,1,0,1,0,1,0,0,1,0,0,0,0,1,1,0,1,1,0,1},
+    {1,0,0,0,0,0,1,0,1,1,0,0,1,0,1,0,1,0,1,0,1,0,1,1,0},
+    {1,1,1,1,1,1,1,0,1,0,0,1,0,1,0,1,0,1,0,1,0,1,0,0,1}
+};
 
 /* --- String Helpers --- */
 int strcmp(const char* s1, const char* s2) {
@@ -1351,6 +1383,32 @@ void cmd_color(char* args) {
 
     vga_write("\nMatrix updated successfully!\n");
 }
+void display_discord_qr() {
+    // 1. Clear a blank line above the QR code
+    vga_write("\n\n"); 
+
+    for (int y = 0; y < QR_SIZE; y++) {
+        // Optional: White margin on the left side (Quiet Zone)
+        vga_write("    "); 
+
+        for (int x = 0; x < QR_SIZE; x++) {
+            if (alios_discord_qr[y][x] == 1) {
+                // Print two solid blocks for a perfect square pixel
+                // '█' is code 0xDB
+                vga_write('█'); 
+                vga_write('█');
+            } else {
+                // Print two spaces for the white modules
+                vga_write(' ');
+                vga_write(' ');
+            }
+        }
+        // Move down to the next row of pixels
+        vga_write('\n'); 
+    }
+    
+    vga_write("\n Scan to join the AliOS Discord Server!\n\n");
+}
 
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
@@ -1410,7 +1468,7 @@ void shell_init() {
     shell_register_command("fmrt","Wipe and init AliFS", cmd_format);
     shell_register_command("mkdir", "Create a new directory", cmd_mkdir);
     shell_register_command("gtdi", "Go To DIrectory", cmd_cd);
-    shell_register_command("aosdcserv", "AliOS Discord Server", aosdcserver);
+    shell_register_command("aosdcserv", "AliOS Discord Server", display_discord_qr);
     shell_register_command("asma", "Random Name of Allah and its meaning", cmd_asma);
     shell_register_command("install", "Install AliOS", install_aos);
     shell_register_command("divbyzero", "DivbyZero", cmd_divbyzero);
