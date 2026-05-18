@@ -1383,32 +1383,53 @@ void cmd_color(char* args) {
 
     vga_write("\nMatrix updated successfully!\n");
 }
-void display_discord_qr() {
-    // 1. Clear a blank line above the QR code
-    vga_write("\n\n"); 
 
-    for (int y = 0; y < QR_SIZE; y++) {
-        // Optional: White margin on the left side (Quiet Zone)
-        vga_write("    "); 
+#define QR_SIZE 25
+
+void display_discord_qr() {
+    // 1. Set background to White, foreground to Black, and wipe the buffer
+    vga_set_color(0xF0);
+    vga_cls();
+
+    // 2. Padding Top: Add 4 newlines to center the 13-line QR code vertically 
+    vga_write("\n\n\n\n"); 
+
+    // 3. Loop through the 25 rows, processing TWO rows at a time
+    for (int y = 0; y < QR_SIZE; y += 2) {
+        
+        // Horizontal Centering: 27 spaces on a solid white background
+        vga_write("                           "); 
 
         for (int x = 0; x < QR_SIZE; x++) {
-            if (alios_discord_qr[y][x] == 1) {
-                // Print two solid blocks for a perfect square pixel
-                // '█' is code 0xDB
-                vga_write('█'); 
-                vga_write('█');
+            int top = alios_discord_qr[y][x];
+            int bottom = (y + 1 < QR_SIZE) ? alios_discord_qr[y + 1][x] : 0;
+
+            // Mapping bits to high-contrast monochrome glyphs
+            if (top == 1 && bottom == 1) {
+                vga_write('█'); // Solid black block (Foreground)
+            } else if (top == 1 && bottom == 0) {
+                vga_write('▀'); // Top half black, bottom half white
+            } else if (top == 0 && bottom == 1) {
+                vga_write('▄'); // Top half white, bottom half black
             } else {
-                // Print two spaces for the white modules
-                vga_write(' ');
-                vga_write(' ');
+                vga_write(' '); // Solid white block (Background)
             }
         }
-        // Move down to the next row of pixels
         vga_write('\n'); 
     }
     
-    vga_write("\n Scan to join the AliOS Discord Server!\n\n");
+    // Add a quick text guide at the bottom of the white screen
+    vga_write("\n                    Scan to join the AliOS Discord Server!");
+
+    // 4. Hold execution for 10 seconds for the user to scan the QR
+    sleep(10);
+
+    // 5. Clean up! Reset to classic Yellow on Blue theme and clear screen
+    vga_set_color(0x1E);
+    vga_cls();
 }
+
+
 
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
