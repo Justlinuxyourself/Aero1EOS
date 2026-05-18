@@ -190,16 +190,22 @@ void todo_init() {
 }
 
 void log_ok(const char* msg) {
-    vga_set_attribute(0x1F); // Bright White on Blue background
+    extern unsigned char current_vga_color; // Access the global color tracker
+
+    current_vga_color = 0x1F; // Bright White on Blue (Characters only)
     vga_write("[  ");
-    vga_set_attribute(0x1A); // Light Green on Blue background (Pure clean contrast!)
+    
+    current_vga_color = 0x1A; // Light Green on Blue
     vga_write("OK");
-    vga_set_attribute(0x1F); // Bright White on Blue background
+    
+    current_vga_color = 0x1F; // Bright White on Blue
     vga_write("  ] ");
-    vga_set_attribute(0x1E); // classic Notebook Yellow on Blue for the text
+    
+    current_vga_color = 0x1E; // Yellow on Blue for the text message
     vga_write(msg);
     vga_write("\n");
 }
+
 
 
 void kernel_main() {
