@@ -190,16 +190,17 @@ void todo_init() {
 }
 
 void log_ok(const char* msg) {
-    vga_set_attribute(0x0F); // White text for bracket (Local change only)
+    vga_set_attribute(0x1F); // Bright White on Blue background
     vga_write("[  ");
-    vga_set_attribute(0x0A); // Green text for OK
+    vga_set_attribute(0x1A); // Light Green on Blue background (Pure clean contrast!)
     vga_write("OK");
-    vga_set_attribute(0x0F); // White text for bracket
+    vga_set_attribute(0x1F); // Bright White on Blue background
     vga_write("  ] ");
-    vga_set_attribute(0x1E); // Reset character attribute to baseline Yellow/Blue
+    vga_set_attribute(0x1E); // classic Notebook Yellow on Blue for the text
     vga_write(msg);
     vga_write("\n");
 }
+
 
 void kernel_main() {
     vga_clear();
