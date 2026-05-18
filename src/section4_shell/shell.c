@@ -1389,7 +1389,7 @@ void cmd_color(char* args) {
 void display_discord_qr() {
     // 1. Set background to White, foreground to Black, and wipe the buffer
     vga_set_color(0xF0);
-    vga_cls();
+    vga_clear();
 
     // 2. Padding Top: Add 4 newlines to center the 13-line QR code vertically 
     vga_write("\n\n\n\n"); 
@@ -1426,7 +1426,7 @@ void display_discord_qr() {
 
     // 5. Clean up! Reset to classic Yellow on Blue theme and clear screen
     vga_set_color(0x1E);
-    vga_cls();
+    vga_clear();
 }
 
 
