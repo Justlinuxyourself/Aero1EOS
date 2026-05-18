@@ -78,7 +78,33 @@ typedef struct {
 
 #define QR_SIZE 25
 
-
+const unsigned char alios_discord_qr[QR_SIZE][QR_SIZE] = {
+    {1,1,1,1,1,1,1,0,1,1,1,0,0,0,1,0,1,0,1,1,1,1,1,1,1},
+    {1,0,0,0,0,0,1,0,1,0,0,1,1,1,0,0,0,0,1,0,0,0,0,0,1},
+    {1,0,1,1,1,0,1,0,0,1,1,1,0,1,1,0,1,0,1,0,1,1,1,0,1},
+    {1,0,1,1,1,0,1,0,1,0,0,0,1,0,0,1,0,0,1,0,1,1,1,0,1},
+    {1,0,1,1,1,0,1,0,0,1,0,1,0,1,0,0,1,0,1,0,1,1,1,0,1},
+    {1,0,0,0,0,0,1,0,0,0,1,1,1,1,1,0,1,0,1,0,0,0,0,0,1},
+    {1,1,1,1,1,1,1,0,1,0,1,0,1,0,1,0,1,0,1,1,1,1,1,1,1},
+    {0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+    {1,1,1,1,1,1,0,0,0,1,0,0,1,1,0,1,1,1,0,1,0,1,0,1,0},
+    {0,0,0,0,0,0,1,0,1,1,1,1,0,0,1,0,0,1,0,0,0,0,1,0,1},
+    {1,0,1,1,1,0,0,1,0,0,0,1,0,1,0,1,0,0,1,1,1,1,0,1,0},
+    {1,1,0,1,0,1,1,0,1,1,0,0,1,0,0,1,1,1,0,0,0,0,0,0,0},
+    {1,0,0,0,1,1,0,1,1,1,1,0,0,1,0,1,1,1,1,1,1,1,1,1,1},
+    {1,0,1,1,1,0,1,1,0,0,0,1,1,0,0,1,0,0,0,1,0,0,0,1,1},
+    {1,1,0,1,0,1,0,0,1,1,0,1,0,1,1,0,1,0,0,1,1,1,0,1,1},
+    {1,0,1,1,1,1,1,1,0,0,1,0,0,1,0,0,0,1,1,1,1,1,1,1,1},
+    {1,1,0,0,0,0,1,1,1,1,0,1,1,1,1,1,1,1,0,0,0,0,1,1,1},
+    {0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,1,0,1,1,0,1,0,0,0,0},
+    {1,1,1,1,1,1,1,0,1,1,1,0,1,1,0,0,0,1,0,1,1,0,0,0,1},
+    {1,0,0,0,0,0,1,0,0,1,0,1,0,0,1,1,1,1,1,1,1,0,1,1,0},
+    {1,0,1,1,1,0,1,0,1,0,0,0,1,1,0,1,1,1,0,0,1,1,1,0,0},
+    {1,0,1,1,1,0,1,0,1,1,0,1,1,0,0,1,0,1,1,1,0,0,0,1,0},
+    {1,0,1,1,1,0,1,0,1,0,1,0,0,1,0,0,0,0,1,1,0,1,1,0,1},
+    {1,0,0,0,0,0,1,0,1,1,0,0,1,0,1,0,1,0,1,0,1,0,1,1,0},
+    {1,1,1,1,1,1,1,0,1,0,0,1,0,1,0,1,0,1,0,1,0,1,0,0,1}
+};
 /* --- String Helpers --- */
 int strcmp(const char* s1, const char* s2) {
     while (*s1 && (*s1 == *s2)) { s1++; s2++; }
@@ -1358,77 +1384,59 @@ void cmd_color(char* args) {
 
 #define QR_SIZE 25
 
+#define QR_SIZE 25
+
 void display_discord_qr() {
-    // 1 = Black block, 0 = White space
-const unsigned char alios_discord_qr[QR_SIZE][QR_SIZE] = {
-    {1,1,1,1,1,1,1,0,1,1,1,0,0,0,1,0,1,0,1,1,1,1,1,1,1},
-    {1,0,0,0,0,0,1,0,1,0,0,1,1,1,0,0,0,0,1,0,0,0,0,0,1},
-    {1,0,1,1,1,0,1,0,0,1,1,1,0,1,1,0,1,0,1,0,1,1,1,0,1},
-    {1,0,1,1,1,0,1,0,1,0,0,0,1,0,0,1,0,0,1,0,1,1,1,0,1},
-    {1,0,1,1,1,0,1,0,0,1,0,1,0,1,0,0,1,0,1,0,1,1,1,0,1},
-    {1,0,0,0,0,0,1,0,0,0,1,1,1,1,1,0,1,0,1,0,0,0,0,0,1},
-    {1,1,1,1,1,1,1,0,1,0,1,0,1,0,1,0,1,0,1,1,1,1,1,1,1},
-    {0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-    {1,1,1,1,1,1,0,0,0,1,0,0,1,1,0,1,1,1,0,1,0,1,0,1,0},
-    {0,0,0,0,0,0,1,0,1,1,1,1,0,0,1,0,0,1,0,0,0,0,1,0,1},
-    {1,0,1,1,1,0,0,1,0,0,0,1,0,1,0,1,0,0,1,1,1,1,0,1,0},
-    {1,1,0,1,0,1,1,0,1,1,0,0,1,0,0,1,1,1,0,0,0,0,0,0,0},
-    {1,0,0,0,1,1,0,1,1,1,1,0,0,1,0,1,1,1,1,1,1,1,1,1,1},
-    {1,0,1,1,1,0,1,1,0,0,0,1,1,0,0,1,0,0,0,1,0,0,0,1,1},
-    {1,1,0,1,0,1,0,0,1,1,0,1,0,1,1,0,1,0,0,1,1,1,0,1,1},
-    {1,0,1,1,1,1,1,1,0,0,1,0,0,1,0,0,0,1,1,1,1,1,1,1,1},
-    {1,1,0,0,0,0,1,1,1,1,0,1,1,1,1,1,1,1,0,0,0,0,1,1,1},
-    {0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,1,0,1,1,0,1,0,0,0,0},
-    {1,1,1,1,1,1,1,0,1,1,1,0,1,1,0,0,0,1,0,1,1,0,0,0,1},
-    {1,0,0,0,0,0,1,0,0,1,0,1,0,0,1,1,1,1,1,1,1,0,1,1,0},
-    {1,0,1,1,1,0,1,0,1,0,0,0,1,1,0,1,1,1,0,0,1,1,1,0,0},
-    {1,0,1,1,1,0,1,0,1,1,0,1,1,0,0,1,0,1,1,1,0,0,0,1,0},
-    {1,0,1,1,1,0,1,0,1,0,1,0,0,1,0,0,0,0,1,1,0,1,1,0,1},
-    {1,0,0,0,0,0,1,0,1,1,0,0,1,0,1,0,1,0,1,0,1,0,1,1,0},
-    {1,1,1,1,1,1,1,0,1,0,0,1,0,1,0,1,0,1,0,1,0,1,0,0,1}
-};
-    // 1. Set background to White, foreground to Black, and wipe the buffer
-    vga_set_color(0xF0);
-    vga_clear();
+    unsigned short* vga_hardware = (unsigned short*)VGA_ADDRESS;
+    tty_t* active = &ttys[current_tty];
 
-    // 2. Padding Top: Add 4 newlines to center the 13-line QR code vertically 
-    vga_write("\n\n\n\n"); 
+    // 1. Force the entire workspace (Rows 0-23) to turn solid White
+    // We leave row 24 completely untouched so Status Bar stays visible!
+    for (int i = 0; i < WIDTH * 24; i++) {
+        unsigned short white_cell = (unsigned short)' ' | (0xF0 << 8); // White BG, Black FG
+        vga_hardware[i] = white_cell;
+        active->buffer[i] = white_cell;
+    }
 
-    // 3. Loop through the 25 rows, processing TWO rows at a time
-    for (int y = 0; y < QR_SIZE; y += 2) {
+    // 2. Center and draw the QR data directly into the video buffer
+    // We skip row 0 and row 24 of the array to make it exactly 23 lines high!
+    for (int y = 1; y < QR_SIZE - 1; y++) {
         
-        // Horizontal Centering: 27 spaces on a solid white background
-        vga_write("                           "); 
+        // Compute starting position to center horizontally
+        // 25 modules * 2 spaces per module = 50 columns wide.
+        // (80 total columns - 50 QR columns) / 2 = 15 spaces on the left.
+        int row_start_pos = ((y - 1 + 1) * WIDTH) + 15; 
 
         for (int x = 0; x < QR_SIZE; x++) {
-            int top = alios_discord_qr[y][x];
-            int bottom = (y + 1 < QR_SIZE) ? alios_discord_qr[y + 1][x] : 0;
-
-            // Mapping bits to high-contrast monochrome glyphs
-            if (top == 1 && bottom == 1) {
-                vga_write('█'); // Solid black block (Foreground)
-            } else if (top == 1 && bottom == 0) {
-                vga_write('▀'); // Top half black, bottom half white
-            } else if (top == 0 && bottom == 1) {
-                vga_write('▄'); // Top half white, bottom half black
+            unsigned char bit = alios_discord_qr[y][x];
+            
+            // If bit is 1, draw a Black block. If 0, draw a White block.
+            // In VGA, a cell with a space ' ' shows its background color completely.
+            unsigned short qr_cell;
+            if (bit == 1) {
+                qr_cell = (unsigned short)' ' | (0x00 << 8); // Black Background
             } else {
-                vga_write(' '); // Solid white block (Background)
+                qr_cell = (unsigned short)' ' | (0xFF << 8); // White Background
             }
-        }
-        vga_write('\n'); 
-    }
-    
-    // Add a quick text guide at the bottom of the white screen
-    vga_write("\n                    Scan to join the AliOS Discord Server!");
 
-    // 4. Hold execution for 10 seconds for the user to scan the QR
+            // Write 2 cells side-by-side to ensure it renders as a perfect square
+            int vga_index = row_start_pos + (x * 2);
+            
+            vga_hardware[vga_index]     = qr_cell;
+            vga_hardware[vga_index + 1] = qr_cell;
+
+            active->buffer[vga_index]     = qr_cell;
+            active->buffer[vga_index + 1] = qr_cell;
+        }
+    }
+
+    // 3. Keep the QR code alive on screen for 10 seconds
     sleep(10);
 
-    // 5. Clean up! Reset to classic Yellow on Blue theme and clear screen
-    vga_set_color(0x1E);
-    vga_clear();
+    // 4. Clean exit! Reset back to notebook yellow/blue theme and clear
+    current_vga_color = NOTEBOOK_YELLOW;
+    vga_clear(); // This will auto-refresh active TTY and clear the screens cleanly!
 }
-
 
 
 /* --- Shell Logic --- */
