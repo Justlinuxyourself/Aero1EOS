@@ -190,16 +190,17 @@ void todo_init() {
 }
 
 void log_ok(const char* msg) {
-	vga_set_color(0x0F);
-	vga_write("[  ");
-	vga_set_color(0x0A);
-	vga_write("OK");
-	vga_set_color(0x0F);
-	vga_write("  ] ");
-	vga_write(msg);
-	vga_write("\n");
-	vga_set_color(0x1E);
+    vga_set_attribute(0x0F); // White text for bracket (Local change only)
+    vga_write("[  ");
+    vga_set_attribute(0x0A); // Green text for OK
+    vga_write("OK");
+    vga_set_attribute(0x0F); // White text for bracket
+    vga_write("  ] ");
+    vga_set_attribute(0x1E); // Reset character attribute to baseline Yellow/Blue
+    vga_write(msg);
+    vga_write("\n");
 }
+
 void kernel_main() {
     vga_clear();
     log_ok("INIT SHELL...");
