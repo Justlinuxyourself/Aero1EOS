@@ -1287,6 +1287,71 @@ void cmd_divbyzero(char* args) {
 void gui() {
   cmd_start_gui();
 }
+/* Helper to print the full 0-F color lookup table */
+void print_color_table() {
+    vga_write(" Hex | Color Name         | Hex | Color Name\n");
+    vga_write("-----+--------------------+-----+--------------------\n");
+    vga_write("  0  | Black              |  8  | Dark Gray\n");
+    vga_write("  1  | Blue               |  9  | Light Blue\n");
+    vga_write("  2  | Green              |  A  | Light Green\n");
+    vga_write("  3  | Cyan               |  B  | Light Cyan\n");
+    vga_write("  4  | Red                |  C  | Light Red\n");
+    vga_write("  5  | Magenta            |  D  | Light Magenta\n");
+    vga_write("  6  | Brown              |  E  | Yellow\n");
+    vga_write("  7  | Light Gray         |  F  | Bright White\n");
+}
+
+/* Helper to convert a single character ('0'-'F') into its integer hex value */
+int parse_single_hex_char(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return -1; // Invalid hex character
+}
+
+/* The interactive color wizard command */
+void cmd_color(char* args) {
+    (void)args; // Ignore any string arguments typed after the command
+    
+    char input_buf[10];
+    int fg = -1;
+    int bg = -1;
+
+    // --- STEP 1: FOREGROUND (TEXT) SELECTION ---
+    print_color_table();
+    vga_write("\nWhat color do you want the text to be? (Enter 0-F): ");
+    
+    kgets(input_buf, 9);
+    fg = parse_single_hex_char(input_buf[0]);
+
+    if (fg < 0 || fg > 15) {
+        vga_write("Error: Invalid color selection code. Aborting.\n");
+        return;
+    }
+
+    vga_write("\n");
+
+    // --- STEP 2: BACKGROUND SELECTION ---
+    print_color_table();
+    vga_write("\nWhat color do you want the background to be? (Enter 0-F): ");
+    
+    kgets(input_buf, 9);
+    bg = parse_single_hex_char(input_buf[0]);
+
+    if (bg < 0 || bg > 15) {
+        vga_write("Error: Invalid color selection code. Aborting.\n");
+        return;
+    }
+
+    // --- STEP 3: BUILD AND SET ATTRIBUTE BYTE ---
+    // Shift background to high nibble, leave foreground in low nibble
+    unsigned char final_attribute = (unsigned char)((bg << 4) | fg);
+
+    vga_set_color(final_attribute);
+
+    vga_write("\nMatrix updated successfully!\n");
+}
+
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
     command_node_t* new_node = (command_node_t*)kmalloc(sizeof(command_node_t));
@@ -1350,6 +1415,7 @@ void shell_init() {
     shell_register_command("install", "Install AliOS", install_aos);
     shell_register_command("divbyzero", "DivbyZero", cmd_divbyzero);
     shell_register_command("gui", "GUI", gui);
+    shell_register_command("color", "Interactive text and background color customization wizard", cmd_color);
 }
 
 void shell_dispatch(char* buffer) {
