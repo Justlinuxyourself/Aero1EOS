@@ -55,12 +55,18 @@ init_32:
     or eax, 0x3
     mov [pdpt], eax              
     
-    ; 2MB Huge Pages Mapping
-    mov dword [pdt],      0x00000083 
-    mov dword [pdt + 8],  0x00200083 
-    mov dword [pdt + 16], 0x00400083 
-    mov dword [pdt + 24], 0x00600083 
-    mov dword [pdt + 32], 0x00800083 
+    ; --- Dynamic 2MB Huge Pages Mapping ---
+    ; Let's map 32 pages (64MB total RAM) using a tiny loop so my kernel has room to breathe!
+    mov edi, pdt
+    mov eax, 0x00000083         ; Starting physical address 0x00000000 + Present + Writable + HugePage
+    mov ecx, 32                 ; 32 pages * 2MB per page = 64MB total mapping area
+.map_kernel_pages:
+    mov [edi], eax              ; Write low 32-bits of the entry
+    mov dword [edi + 4], 0      ; Clear high 32-bits of the entry
+    add eax, 0x00200000         ; Add 2MB to physical address pointer
+    add edi, 8                  ; Jump to next 64-bit page entry in the table
+    loop .map_kernel_pages
+
 
     ; --- Enter Long Mode ---
     mov eax, cr4
