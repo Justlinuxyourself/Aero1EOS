@@ -120,7 +120,7 @@ extern tty_t ttys[];
 extern int current_tty;
 extern unsigned char current_vga_color;
 extern void vga_clear();
-
+extern int status_bar_enabled;
 /* --- String Helpers --- */
 int strcmp(const char* s1, const char* s2) {
     while (*s1 && (*s1 == *s2)) { s1++; s2++; }
