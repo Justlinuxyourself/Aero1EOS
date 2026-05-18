@@ -105,6 +105,20 @@ const unsigned char alios_discord_qr[QR_SIZE][QR_SIZE] = {
     {1,0,0,0,0,0,1,0,1,1,0,0,1,0,1,0,1,0,1,0,1,0,1,1,0},
     {1,1,1,1,1,1,1,0,1,0,0,1,0,1,0,1,0,1,0,1,0,1,0,0,1}
 };
+#define WIDTH 80
+
+typedef struct {
+    unsigned short* buffer;
+    int cursor_pos;
+    char command_buffer[80];
+    int buffer_idx;
+} tty_t;
+
+extern tty_t ttys[];
+extern int current_tty;
+extern unsigned char current_vga_color;
+extern void vga_clear();
+
 /* --- String Helpers --- */
 int strcmp(const char* s1, const char* s2) {
     while (*s1 && (*s1 == *s2)) { s1++; s2++; }
