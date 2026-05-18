@@ -1396,60 +1396,45 @@ void cmd_color(char* args) {
     vga_write("\nMatrix updated successfully!\n");
 }
 
-#define QR_SIZE 25
-
-#define QR_SIZE 25
 
 void display_discord_qr() {
     unsigned short* vga_hardware = (unsigned short*)VGA_ADDRESS;
     tty_t* active = &ttys[current_tty];
 
-    // 1. Force the entire workspace (Rows 0-23) to turn solid White
-    // We leave row 24 completely untouched so Status Bar stays visible!
-    for (int i = 0; i < WIDTH * 24; i++) {
-        unsigned short white_cell = (unsigned short)' ' | (0xF0 << 8); // White BG, Black FG
+    // 1. Shut off the status bar updates temporarily
+    status_bar_enabled = 0;
+
+    // 2. Clear all 25 rows (WIDTH * 25) to solid White
+    for (int i = 0; i < WIDTH * 25; i++) {
+        unsigned short white_cell = (unsigned short)' ' | (0xF0 << 8);
         vga_hardware[i] = white_cell;
         active->buffer[i] = white_cell;
     }
 
-    // 2. Center and draw the QR data directly into the video buffer
-    // We skip row 0 and row 24 of the array to make it exactly 23 lines high!
-    for (int y = 1; y < QR_SIZE - 1; y++) {
-        
-        // Compute starting position to center horizontally
-        // 25 modules * 2 spaces per module = 50 columns wide.
-        // (80 total columns - 50 QR columns) / 2 = 15 spaces on the left.
-        int row_start_pos = ((y - 1 + 1) * WIDTH) + 15; 
+    // 3. Draw the QR code using the pure attribute loop
+    // Since we have all 25 rows now, we center vertically on row 6
+    for (int y = 0; y < QR_SIZE; y += 2) {
+        int row_start_pos = (((y / 2) + 6) * WIDTH) + 15; 
 
         for (int x = 0; x < QR_SIZE; x++) {
             unsigned char bit = alios_discord_qr[y][x];
-            
-            // If bit is 1, draw a Black block. If 0, draw a White block.
-            // In VGA, a cell with a space ' ' shows its background color completely.
-            unsigned short qr_cell;
-            if (bit == 1) {
-                qr_cell = (unsigned short)' ' | (0x00 << 8); // Black Background
-            } else {
-                qr_cell = (unsigned short)' ' | (0xFF << 8); // White Background
-            }
+            unsigned short qr_cell = (unsigned short)' ' | ((bit == 1 ? 0x00 : 0xFF) << 8);
 
-            // Write 2 cells side-by-side to ensure it renders as a perfect square
             int vga_index = row_start_pos + (x * 2);
-            
             vga_hardware[vga_index]     = qr_cell;
             vga_hardware[vga_index + 1] = qr_cell;
-
             active->buffer[vga_index]     = qr_cell;
             active->buffer[vga_index + 1] = qr_cell;
         }
     }
 
-    // 3. Keep the QR code alive on screen for 10 seconds
+    // 4. Hold execution for 10 seconds for scanning
     sleep(10);
 
-    // 4. Clean exit! Reset back to notebook yellow/blue theme and clear
+    // 5. Clean exit: Turn the status bar back on, reset colors, and flush screen
+    status_bar_enabled = 1;
     current_vga_color = NOTEBOOK_YELLOW;
-    vga_clear(); // This will auto-refresh active TTY and clear the screens cleanly!
+    vga_clear(); // This clears the screen and automatically redraws the status bar!
 }
 
 
