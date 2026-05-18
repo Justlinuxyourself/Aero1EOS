@@ -11,7 +11,7 @@ unsigned char current_vga_color = NOTEBOOK_YELLOW; // Default color
 #define HEIGHT 25
 #define MAX_TTYS 10
 #define VIDEO_SIZE (WIDTH * HEIGHT * 2)
-
+int status_bar_enabled = 1; // 1 = Enabled, 0 = Disabled/Hidden
 extern int cmos_get_hour();
 extern int cmos_get_min();
 extern int cmos_get_day();
@@ -79,6 +79,9 @@ void vga_set_attribute(unsigned char color) {
 }
 
 void vga_draw_status_bar() {
+    if (!status_bar_enabled) {
+        return;
+    }
     unsigned short* vga_hardware = (unsigned short*)VGA_ADDRESS;
     tty_t* active = &ttys[current_tty];
     int base_pos = 24 * 80; // Row 24
