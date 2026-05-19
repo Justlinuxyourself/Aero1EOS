@@ -95,7 +95,7 @@ init_64:
     mov ds, ax
     mov es, ax
     
-    call kernel_main            ; Welcome to AliOS 4.0 64-bit
+    call kernel_main            ; Welcome to AeroOS 4.0 64-bit
 
 .halt:
     hlt

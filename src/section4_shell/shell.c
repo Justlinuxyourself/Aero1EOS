@@ -237,7 +237,7 @@ char* itohex(unsigned long value, char* str) {
 void cmd_help(char* args) {
     (void)args;
     
-    vga_write("\nAliOS 4 Commands: ");
+    vga_write("\nAeroOS 4 Commands: ");
     
     command_node_t* curr = command_list;
     while (curr) {
@@ -277,7 +277,7 @@ void cmd_neofetch(char* args) {
     char heap_addr_buf[16];
     itohex((unsigned long)&_kernel_end, heap_addr_buf);
     
-    vga_write("   ______      AliOS 4.0\n");
+    vga_write("   ______      AeroOS 4.0\n");
     vga_write("  / ____/      ----------\n");
     vga_write(" / /  __       CPU: "); vga_write(cpu_name); vga_write("\n");
     vga_write("/ /__/ /       MEM: "); vga_write(mem_str); vga_write(" bytes used\n");
@@ -711,7 +711,7 @@ void todo_add(char* text) {
             strcpy(my_list[i].task, text);
             my_list[i].done = 0;
             my_list[i].active = 1;
-            vga_write("Task added to AliOS list.\n");
+            vga_write("Task added to AeroOS list.\n");
             return;
         }
     }
@@ -737,7 +737,7 @@ void draw_menu_item(int id, int selected, const char* text) {
         vga_write(" > ");               // Arrow pointer
         vga_set_color(0x70);            // Invert: Black text on Light Gray background
         vga_write(text);
-        vga_set_color(NOTEBOOK_YELLOW); // Reset to standard AliOS Yellow/Blue
+        vga_set_color(NOTEBOOK_YELLOW); // Reset to standard AeroOS Yellow/Blue
     } else {
         vga_write("   ");               // Spacer for non-selected items
         vga_write(text);
@@ -758,7 +758,7 @@ void cmd_menu(char* args) {
         // Header Section
         vga_set_color(0x1F); // White on Blue (Status Bar Style)
         vga_write("========================================\n");
-        vga_write("          AliOS 4.0 - TOOLBOX           \n");
+        vga_write("          AeroOS 4.0 - TOOLBOX           \n");
         vga_write("      (Use Arrows to Move, Enter)       \n");
         vga_write("========================================\n\n");
         vga_set_color(NOTEBOOK_YELLOW);
@@ -813,7 +813,7 @@ void cmd_menu(char* args) {
     }
 
     vga_clear();
-    vga_write("Returned to AliOS Shell.\n> ");
+    vga_write("Returned to AeroOS Shell.\n> ");
 }
 void play_bad_apple() {
      unsigned short* vga_hardware = (unsigned short*)VGA_ADDRESS;
@@ -862,7 +862,7 @@ void cmd_write_disk(char* args) {
     // 1. Check for empty input
     if (args == 0 || *args == '\0') {
         vga_write("Usage: write_sector <lba> <string>\n");
-        vga_write("Example: write_sector 10 Hello_AliOS\n");
+        vga_write("Example: write_sector 10 Hello_AeroOS\n");
         return;
     }
 
@@ -901,7 +901,7 @@ void cmd_write_disk(char* args) {
     }
 
     
-    vga_write("AliOS Disk: Writing to LBA ");
+    vga_write("AeroOS Disk: Writing to LBA ");
     vga_write(lba_str); 
     vga_write("... ");
 
@@ -1047,7 +1047,7 @@ void cmd_disk_speed(char* args) {
     uint32_t test_sectors = 8192; 
     uint32_t safe_offset = 20000; // Start 10MB into the disk
     
-    vga_write("--- AliOS 4.0 I/O Benchmark (4MB Test) ---\n");
+    vga_write("--- AeroOS 4.0 I/O Benchmark (4MB Test) ---\n");
     vga_write("Target: LBA "); 
     char lba_buf[16]; vga_write(itoa(safe_offset, lba_buf));
     vga_write("\n\n");
@@ -1177,7 +1177,7 @@ void cmd_edit(char* args) {
         return;
     }
 
-    vga_write("\n--- AliOS 4 Multiline Notebook ---\n");
+    vga_write("\n--- AeroOS 4 Multiline Notebook ---\n");
     vga_write("File: "); vga_write(filename); vga_write("\n");
 
     static char note_content[512] __attribute__((aligned(8)));
@@ -1481,7 +1481,7 @@ void shell_init() {
     shell_register_command("cls",  "Clear the notebook screen",   cmd_cls);
     shell_register_command("echo", "Print text to the screen",    cmd_echo);
     shell_register_command("neofetch", "Display dynamic system info", cmd_neofetch);
-    shell_register_command("uptime", "Show how long AliOS has been running", cmd_uptime);
+    shell_register_command("uptime", "Show how long AeroOS has been running", cmd_uptime);
     shell_register_command("free", "Check dynamic RAM usage", cmd_free);
     shell_register_command("timezone", "Adjust the status bar clock offset", shell_cmd_timezone);
     shell_register_command("lock", "Locks the system", shell_lock);
@@ -1501,7 +1501,7 @@ void shell_init() {
     shell_register_command("get", "Get VAR", cmd_get);
     shell_register_command("tdadd", "Add to ToDo List", todo_add);
     shell_register_command("tdshw", "Show ToDo List", todo_show);
-    shell_register_command("menu", "AliOS Menu", cmd_menu);
+    shell_register_command("menu", "AeroOS Menu", cmd_menu);
     shell_register_command("badapple", "Bad Apple", play_bad_apple);
     shell_register_command("read_sector", "Read Sector IDE", cmd_read_disk);
     shell_register_command("write_sector", "Write Sector IDE", cmd_write_disk);
@@ -1516,9 +1516,9 @@ void shell_init() {
     shell_register_command("fmrt","Wipe and init AliFS", cmd_format);
     shell_register_command("mkdir", "Create a new directory", cmd_mkdir);
     shell_register_command("gtdi", "Go To DIrectory", cmd_cd);
-    shell_register_command("aosdcserv", "AliOS Discord Server", display_discord_qr);
+    shell_register_command("aosdcserv", "AeroOS Discord Server", display_discord_qr);
     shell_register_command("asma", "Random Name of Allah and its meaning", cmd_asma);
-    shell_register_command("install", "Install AliOS", install_aos);
+    shell_register_command("install", "Install AeroOS", install_aos);
     shell_register_command("divbyzero", "DivbyZero", cmd_divbyzero);
     shell_register_command("gui", "GUI", gui);
     shell_register_command("color", "Interactive text and background color customization wizard", cmd_color);
@@ -1529,7 +1529,7 @@ void shell_init() {
 void shell_dispatch(char* buffer) {
     // If the user just hits enter, just print a new prompt on a new line
     if (strlen(buffer) == 0) {
-        vga_write("\nAliOS:");
+        vga_write("\nAeroOS:");
         vga_write(current_path);
         vga_write("> ");
         return;
@@ -1549,7 +1549,7 @@ void shell_dispatch(char* buffer) {
         if (strcmp(curr->name, buffer) == 0) {
             vga_write("\n"); // Move to new line before command output
             curr->function(args);
-            vga_write("\nAliOS:");
+            vga_write("\nAeroOS:");
             vga_write(current_path);
             vga_write("> ");
             return;
@@ -1558,10 +1558,10 @@ void shell_dispatch(char* buffer) {
     }
 
     // If command not found
-    vga_write("\nAliOS: '");
+    vga_write("\nAeroOS: '");
     vga_write(buffer);
     vga_write("' not found. Type 'help'.\n ");
-    vga_write("\nAliOS:");
+    vga_write("\nAeroOS:");
     vga_write(current_path);
     vga_write("> ");
 }

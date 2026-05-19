@@ -1,4 +1,4 @@
-# --- AliOS 4 Master Build System ---
+# --- AeroOS 4 Master Build System ---
 SRCDIR = src
 OBJDIR = obj
 BIN = alios4.bin
@@ -38,7 +38,7 @@ update_payload: $(BIN)
 	@echo "--- EMBEDDING REAL KERNEL INTO PAYLOAD ---"
 	grub-mkimage -o grub_core.img -O i386-pc -c early_grub.cfg -p /boot/grub biosdisk part_msdos fat normal multiboot multiboot2
 	cp /usr/lib/grub/i386-pc/boot.img .
-	@echo "/* Real AliOS Payload */" > $(PAYLOAD_H)
+	@echo "/* Real AeroOS Payload */" > $(PAYLOAD_H)
 	xxd -i boot.img >> $(PAYLOAD_H)
 	xxd -i grub_core.img >> $(PAYLOAD_H)
 	xxd -i $(BIN) >> $(PAYLOAD_H)
@@ -62,7 +62,7 @@ $(ISO): $(BIN)
 	@mkdir -p isodir/boot/grub
 	cp $(BIN) isodir/boot/
 	@echo 'set timeout=5' > isodir/boot/grub/grub.cfg
-	@echo 'menuentry "AliOS 4.0" { multiboot2 /boot/alios4.bin; boot }' >> isodir/boot/grub/grub.cfg
+	@echo 'menuentry "AeroOS 4.0" { multiboot2 /boot/alios4.bin; boot }' >> isodir/boot/grub/grub.cfg
 	grub-mkrescue -o $(ISO) isodir
 
 clean:
