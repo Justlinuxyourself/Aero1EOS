@@ -1,9 +1,9 @@
 
 <p align="center">
-  <img src="assets/IMG_2512.jpeg" alt="AeroOS Logo" width="300">
+  <img src="assets/IMG_2512.jpeg" alt="Aero1EOS Logo" width="300">
 </p>
 
-<h1 align="center">💻 AeroOS 4.0 - Notebook Edition</h1>
+<h1 align="center">💻 Aero1EOS 4.0 - Notebook Edition</h1>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Built%20With-C-A8B9CC?style=flat-square&logo=c&logoColor=white" alt="C">
@@ -19,7 +19,7 @@
 > [!WARNING]
 > some features dont work on real hardware, and some are untested.
 
-AeroOS 4 is a custom-built, 64-bit "Notebook" style operating system. It features a hardened security model, a multi-terminal interface (TTY), and a real-time status bar calibrated for high-precision timing.
+Aero1EOS 4 is a custom-built, 64-bit "Notebook" style operating system. It features a hardened security model, a multi-terminal interface (TTY), and a real-time status bar calibrated for high-precision timing.
 
 ## 🚀 Key Features
 
@@ -55,7 +55,7 @@ AeroOS 4 is a custom-built, 64-bit "Notebook" style operating system. It feature
 | `help` | Lists all registered system commands. |
 | `cls` | Clears the notebook screen. |
 | `neofetch` | Displays CPU vendor, RAM usage, and OS mode. |
-| `uptime` | Show how long AeroOS has been running. |
+| `uptime` | Show how long Aero1EOS has been running. |
 | `free` | Check dynamic RAM usage (Total, Used, Free). |
 | `timezone` | Adjusts the status bar clock offset in real-time. |
 | `lock` | Manually triggers the hardened lock screen. |
@@ -83,7 +83,7 @@ AeroOS 4 is a custom-built, 64-bit "Notebook" style operating system. It feature
 └── linker.ld              # Kernel Memory Layout
 ```
 ## 🍎 Bad Apple!! VGA Demo
-AeroOS 4 includes a built-in "Bad Apple!!" ASCII animation demo to showcase the stability of the kernel's high-speed VGA memory mapping and the **Notebook-Edition** independent TTY system.
+Aero1EOS 4 includes a built-in "Bad Apple!!" ASCII animation demo to showcase the stability of the kernel's high-speed VGA memory mapping and the **Notebook-Edition** independent TTY system.
 
 ### 🛠 Technical Specifications
 * **Resolution:** 80x24 (Workspace mode) (24 BC OF STATUS BAR!!!(
@@ -94,17 +94,17 @@ AeroOS 4 includes a built-in "Bad Apple!!" ASCII animation demo to showcase the 
 ## 📜 Licensing & Credits
 
 ### Kernel & Operating System
-AeroOS 4.0 is open-source software licensed under the **MIT License**. 
+Aero1EOS 4.0 is open-source software licensed under the **MIT License**. 
 
 By using, modifying, or distributing this software, you agree to the following terms:
 * **Attribution Required:** You must preserve the original copyright notice and permission notice in all copies or substantial portions of the software.
 * **No Warranty:** The software is provided "as is", without warranty of any kind. The author is not liable for any damages or data loss resulting from its use.
 
 > [!CAUTION]
-> **Plagiarism Warning:** While the MIT license permits modification and redistribution, removing the developer's name, claiming authorship of the original core components, or rebranding AeroOS without explicit attribution violates the license terms. Copyright infringement and license violations will be tracked via Git history and reported publicly on hosting platforms.
+> **Plagiarism Warning:** While the MIT license permits modification and redistribution, removing the developer's name, claiming authorship of the original core components, or rebranding Aero1EOS without explicit attribution violates the license terms. Copyright infringement and license violations will be tracked via Git history and reported publicly on hosting platforms.
 
 ### Demo Assets
-* **Bad Apple!! Animation:** Based on *Touhou Project*. These ASCII assets are community-driven and included solely for demonstrating the AeroOS 4 video driver performance.
+* **Bad Apple!! Animation:** Based on *Touhou Project*. These ASCII assets are community-driven and included solely for demonstrating the Aero1EOS 4 video driver performance.
 
 ## Bugs:
 - Beep stutters

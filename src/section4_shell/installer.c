@@ -14,7 +14,7 @@ extern void ide_write_sector_bytes(uint32_t lba, uint8_t* buffer);
 extern void cmd_disk_wipe();
 /**
  * itoa
- * Converts an integer to a string for display in AeroOS.
+ * Converts an integer to a string for display in Aero1EOS.
  */
 static void itoa(uint32_t n, char* s) {
     uint32_t i = 0, j;
@@ -36,7 +36,7 @@ static void itoa(uint32_t n, char* s) {
 
 void cmd_install_os() {
     vga_set_color(0x0B); // Cyan
-    vga_write("\n[ AeroOS 4.0 Self-Hosting Installer ]\n");
+    vga_write("\n[ Aero1EOS 4.0 Self-Hosting Installer ]\n");
     vga_set_color(0x0F); // White
 
     // --- 1. BUILD SYSTEM CHECK ---
@@ -73,7 +73,7 @@ void cmd_install_os() {
     sector_0[452] = 0xFF; // Ending Sector
     sector_0[453] = 0xFF; // Ending Cylinder
     
-    // Starting LBA Sector (Sector 2048, where AeroOS lives)
+    // Starting LBA Sector (Sector 2048, where Aero1EOS lives)
     sector_0[454] = 0x00; 
     sector_0[455] = 0x08; 
     sector_0[456] = 0x00; 
@@ -106,7 +106,7 @@ void cmd_install_os() {
 
     // --- 6. SUCCESS SUMMARY ---
     vga_set_color(0x0A); // Green
-    vga_write("\nSUCCESS! AeroOS 4.0 is now on (hd0).\n");
+    vga_write("\nSUCCESS! Aero1EOS 4.0 is now on (hd0).\n");
     vga_set_color(0x0F); // White
     
     vga_write("Reboot and type this into GRUB:\n");
