@@ -108,6 +108,7 @@ const unsigned char alios_discord_qr[QR_SIZE][QR_SIZE] = {
 };
 
 #define WIDTH 80
+#define HEIGHT 25
 
 typedef struct {
     unsigned short* buffer;
