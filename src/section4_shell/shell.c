@@ -1415,38 +1415,43 @@ void display_discord_qr() {
     unsigned short* vga_hardware = (unsigned short*)VGA_ADDRESS;
     tty_t* active = &ttys[current_tty];
 
-    // Preserve original state
+    // 1. Save current state
     int old_status_bar = status_bar_enabled;
-    status_bar_enabled = 0;
+    status_bar_enabled = 0; // Disable status bar so it doesn't overwrite
     
-    // Clear background to white (Quiet Zone)
+    // 2. Clear screen to a neutral white for the QR quiet zone
     unsigned short white_cell = (unsigned short)' ' | (0xF0 << 8);
     for (int i = 0; i < WIDTH * HEIGHT; i++) {
         vga_hardware[i] = white_cell;
         active->buffer[i] = white_cell;
     }
 
-    // Centering constants for 21x21 matrix
+    // 3. Draw QR code
+    // Version 1 is 21x21. Starting at 19 gives perfect horizontal centering.
     const int start_row = 2;
-    const int start_col = 19;
+    const int start_col = 19; 
 
-    // Render matrix
     for (int y = 0; y < QR_SIZE; y++) {
         for (int x = 0; x < QR_SIZE; x++) {
             draw_qr_module(vga_hardware, start_row + y, start_col + x, alios_discord_qr[y][x]);
-            // Sync with TTY buffer
             draw_qr_module(active->buffer, start_row + y, start_col + x, alios_discord_qr[y][x]);
         }
     }
 
-    // Hold display
-    sleep(10);
+    // 4. Wait for user interaction or timeout
+    // Using a loop to check for a keypress keeps the system responsive
+    for (int i = 0; i < 100; i++) { // Roughly 10 seconds
+        if (inb(0x64) & 1) break; // Exit early if key pressed
+        sleep_ms(100);
+    }
+    // Flush key if pressed
+    if (inb(0x64) & 1) inb(0x60); 
 
-    // Restore state
+    // 5. Restore state and clean up
     status_bar_enabled = old_status_bar;
-    current_vga_color = NOTEBOOK_YELLOW;
     vga_clear(); 
 }
+
 void enable_status_bar() {
   status_bar_enabled = 1;
 }
