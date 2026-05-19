@@ -1,7 +1,4 @@
 
-<p align="center">
-  <img src="assets/IMG_2512.jpeg" alt="Aero1EOS Logo" width="300">
-</p>
 
 <h1 align="center">💻 Aero1EOS 4.0 - Notebook Edition</h1>
 
