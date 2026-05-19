@@ -1448,10 +1448,10 @@ void display_discord_qr() {
     vga_clear(); 
 }
 void enable_status_bar() {
-  status_bar_enabled = 1
+  status_bar_enabled = 1;
 }
 void disable_status_bar() {
-  status_bar_enabled = 0
+  status_bar_enabled = 0;
 }
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
