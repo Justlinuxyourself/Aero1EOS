@@ -1397,57 +1397,62 @@ void cmd_color(char* args) {
 }
 
 
+// Helper to draw a single module at a specific coordinate
+static inline void draw_qr_module(unsigned short* vga, int row, int col, int bit) {
+    // 1 = Black module (0x00 background), 0 = White background (0xF0)
+    unsigned char bg = (bit == 1) ? 0x00 : 0xF0;
+    unsigned short cell = (unsigned short)' ' | (bg << 8);
+
+    // Calculate buffer index
+    int index = (row * WIDTH) + (col * 2);
+
+    // Fill 2x1 cell in VGA buffer
+    vga[index] = cell;
+    vga[index + 1] = cell;
+}
+
 void display_discord_qr() {
     unsigned short* vga_hardware = (unsigned short*)VGA_ADDRESS;
     tty_t* active = &ttys[current_tty];
 
-    // 1. Turn off status bar and clear screen to white background
+    // Preserve original state
+    int old_status_bar = status_bar_enabled;
     status_bar_enabled = 0;
     
-    // Fill screen with white spaces (0xF0 attribute)
+    // Clear background to white (Quiet Zone)
+    unsigned short white_cell = (unsigned short)' ' | (0xF0 << 8);
     for (int i = 0; i < WIDTH * HEIGHT; i++) {
-        unsigned short white_cell = (unsigned short)' ' | (0xF0 << 8);
         vga_hardware[i] = white_cell;
         active->buffer[i] = white_cell;
     }
 
-    // 2. Align the QR code to center it nicely
-    int start_row = 0;  // Top row
-    int start_col = 15; // Centered columns
+    // Centering constants for 21x21 matrix
+    const int start_row = 2;
+    const int start_col = 19;
 
-    // FIX: y++ instead of y += 2 so we don't drop any data!
+    // Render matrix
     for (int y = 0; y < QR_SIZE; y++) {
-        int vga_row = start_row + y;
-        int row_start_pos = (vga_row * WIDTH) + start_col;
-
         for (int x = 0; x < QR_SIZE; x++) {
-            unsigned char bit = alios_discord_qr[y][x];
-            
-            // 1 = Black background (0x00), 0 = White background (0xF0)
-            // We use ' ' (space) as the character byte
-            unsigned char bg_color = (bit == 1) ? 0x00 : 0xF0;
-            unsigned short qr_cell = (unsigned short)' ' | (bg_color << 8);
-
-            // Double the columns horizontally (x * 2) so it stays a perfect square
-            int vga_index = row_start_pos + (x * 2);
-            vga_hardware[vga_index]     = qr_cell;
-            vga_hardware[vga_index + 1] = qr_cell;
-            active->buffer[vga_index]     = qr_cell;
-            active->buffer[vga_index + 1] = qr_cell;
+            draw_qr_module(vga_hardware, start_row + y, start_col + x, alios_discord_qr[y][x]);
+            // Sync with TTY buffer
+            draw_qr_module(active->buffer, start_row + y, start_col + x, alios_discord_qr[y][x]);
         }
     }
 
-    // 3. Keep it on screen for 10 seconds to scan
+    // Hold display
     sleep(10);
 
-    // 4. Restore kernel state
-    status_bar_enabled = 1;
+    // Restore state
+    status_bar_enabled = old_status_bar;
     current_vga_color = NOTEBOOK_YELLOW;
     vga_clear(); 
 }
-
-
-
+void enable_status_bar() {
+  status_bar_enabled = 1
+}
+void disable_status_bar() {
+  status_bar_enabled = 0
+}
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
     command_node_t* new_node = (command_node_t*)kmalloc(sizeof(command_node_t));
@@ -1512,6 +1517,8 @@ void shell_init() {
     shell_register_command("divbyzero", "DivbyZero", cmd_divbyzero);
     shell_register_command("gui", "GUI", gui);
     shell_register_command("color", "Interactive text and background color customization wizard", cmd_color);
+    shell_register_command("disablestat", "DISABLE STATus bar", disable_status_bar);
+    shell_register_command("enablestat", "ENABLE STATus bar", enable_status_bar);
 }
 
 void shell_dispatch(char* buffer) {
