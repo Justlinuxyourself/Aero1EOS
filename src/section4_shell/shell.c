@@ -1403,25 +1403,34 @@ void display_discord_qr() {
     unsigned short* vga_hardware = (unsigned short*)VGA_ADDRESS;
     tty_t* active = &ttys[current_tty];
 
-    // 1. Shut off the status bar updates temporarily
+    // 1. Turn off status bar and clear screen to white background
     status_bar_enabled = 0;
-
-    // 2. Clear all 25 rows (WIDTH * 25) to solid White
-    for (int i = 0; i < WIDTH * 25; i++) {
+    
+    // Fill screen with white spaces (0xF0 attribute)
+    for (int i = 0; i < WIDTH * HEIGHT; i++) {
         unsigned short white_cell = (unsigned short)' ' | (0xF0 << 8);
         vga_hardware[i] = white_cell;
         active->buffer[i] = white_cell;
     }
 
-    // 3. Draw the QR code using the pure attribute loop
-    // Since we have all 25 rows now, we center vertically on row 6
-    for (int y = 0; y < QR_SIZE; y += 2) {
-        int row_start_pos = (((y / 2) + 6) * WIDTH) + 15; 
+    // 2. Align the QR code to center it nicely
+    int start_row = 0;  // Top row
+    int start_col = 15; // Centered columns
+
+    // FIX: y++ instead of y += 2 so we don't drop any data!
+    for (int y = 0; y < QR_SIZE; y++) {
+        int vga_row = start_row + y;
+        int row_start_pos = (vga_row * WIDTH) + start_col;
 
         for (int x = 0; x < QR_SIZE; x++) {
             unsigned char bit = alios_discord_qr[y][x];
-            unsigned short qr_cell = (unsigned short)' ' | ((bit == 1 ? 0x00 : 0xFF) << 8);
+            
+            // 1 = Black background (0x00), 0 = White background (0xF0)
+            // We use ' ' (space) as the character byte
+            unsigned char bg_color = (bit == 1) ? 0x00 : 0xF0;
+            unsigned short qr_cell = (unsigned short)' ' | (bg_color << 8);
 
+            // Double the columns horizontally (x * 2) so it stays a perfect square
             int vga_index = row_start_pos + (x * 2);
             vga_hardware[vga_index]     = qr_cell;
             vga_hardware[vga_index + 1] = qr_cell;
@@ -1430,14 +1439,15 @@ void display_discord_qr() {
         }
     }
 
-    // 4. Hold execution for 10 seconds for scanning
+    // 3. Keep it on screen for 10 seconds to scan
     sleep(10);
 
-    // 5. Clean exit: Turn the status bar back on, reset colors, and flush screen
+    // 4. Restore kernel state
     status_bar_enabled = 1;
     current_vga_color = NOTEBOOK_YELLOW;
-    vga_clear(); // This clears the screen and automatically redraws the status bar!
+    vga_clear(); 
 }
+
 
 
 /* --- Shell Logic --- */
