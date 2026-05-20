@@ -20,8 +20,8 @@ all: $(ISO)
 $(PAYLOAD_H):
 	@echo "--- CREATING BOOTSTRAP PAYLOAD ---"
 	@mkdir -p $(SRCDIR)/section4_shell
-	@echo "unsigned char alios4_bin[] = {0x00};" > $(PAYLOAD_H)
-	@echo "unsigned int alios4_bin_len = 1;" >> $(PAYLOAD_H)
+	@echo "unsigned char aero1eos4_bin[] = {0x00};" > $(PAYLOAD_H)
+	@echo "unsigned int aero1eos4_bin_len = 1;" >> $(PAYLOAD_H)
 	@echo "unsigned char boot_img[] = {0x00};" >> $(PAYLOAD_H)
 	@echo "unsigned int boot_img_len = 1;" >> $(PAYLOAD_H)
 	@echo "unsigned char grub_core_img[] = {0x00};" >> $(PAYLOAD_H)
