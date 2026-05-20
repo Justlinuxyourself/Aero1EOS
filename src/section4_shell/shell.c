@@ -1494,7 +1494,6 @@ void killscreen() {
     play_sound(80); 
     for(volatile int i = 0; i < 50000000; i++);
     
-    }
   }
 }
 /* --- Shell Logic --- */
