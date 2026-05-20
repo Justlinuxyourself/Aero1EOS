@@ -1458,6 +1458,45 @@ void enable_status_bar() {
 void disable_status_bar() {
   status_bar_enabled = 0;
 }
+void killscreen() {
+  vga_set_color(0x47);
+  vga_write("             __             ");
+  vga_write("          ,g$$$$Sk.         ");
+  vga_write("        ,d$$$$$$$$$$k.      ");
+  vga_write("      ,?^?$?°\'  \'?$SS$$L.   ");
+  vga_write("     ,?  $SL._  ,d$iIS$$SL  ");
+  vga_write("    j$Su%$$$$$$$$?:iIS$$Sb  ");
+  vga_write("   :?°?^4$S$$\"°?$SL:iIS$SI: ");
+  vga_write("   :\'   \',\'?$\' .  \'?LiS$$SI:");
+  vga_write("   \'                ?kiSSI? ");
+  vga_write("        :.       $k _ \'?Si7 ");
+  vga_write("       .,_,_     i$S%7·:i?\' ");
+  vga_write("      ?%uS%uo d$$?\'·?°      ");
+  vga_write("      $$$$$$$$$$i           ");
+  vga_write("      ·?$$S?                ");
+  sleep(1);
+  vga_set_color(0x74);
+  sleep(1);
+  vga_set_color(0x47);
+  sleep(1);
+  vga_set_color(0x74);
+  sleep(1);
+  vga_set_color(0x47);
+  vga_clear();
+  for (int numtios = 0; numtios < 10; numtios += 1) {
+  // Slide frequency down from 2000Hz to 100Hz
+    for (int freq = 2000; freq > 100; freq -= 5) {
+        play_sound(freq);
+        for(volatile int i = 0; i < 200000; i++); // Fast delay for smooth sliding
+    }
+    
+    // Hold a flatline low drone for a moment
+    play_sound(80); 
+    for(volatile int i = 0; i < 50000000; i++);
+    
+    }
+  }
+}
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
     command_node_t* new_node = (command_node_t*)kmalloc(sizeof(command_node_t));
@@ -1524,6 +1563,7 @@ void shell_init() {
     shell_register_command("color", "Interactive text and background color customization wizard", cmd_color);
     shell_register_command("disablestat", "DISABLE STATus bar", disable_status_bar);
     shell_register_command("enablestat", "ENABLE STATus bar", enable_status_bar);
+    shell_register_command("killscreen", "KillScreen", killscreen);
 }
 
 void shell_dispatch(char* buffer) {
