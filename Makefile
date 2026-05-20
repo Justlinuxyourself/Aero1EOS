@@ -61,8 +61,7 @@ $(ISO): $(BIN)
 	@echo "--- CREATING FINAL ISO ---"
 	@mkdir -p isodir/boot/grub
 	cp $(BIN) isodir/boot/
-	@echo 'set timeout=5' > isodir/boot/grub/grub.cfg
-	@echo 'menuentry "Aero1EOS 4.0" { multiboot2 /boot/alios4.bin; boot }' >> isodir/boot/grub/grub.cfg
+	cp grub.cfg isodir/boot/grub/grub.cfg
 	grub-mkrescue -o $(ISO) isodir
 
 clean:
