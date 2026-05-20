@@ -519,17 +519,57 @@ void cmd_peek(char* args) {
     }
 
     unsigned char* ptr = (unsigned char*)addr;
-    vga_write("Memory at 0x");
-    vga_write(args);
-    vga_write(": ");
+    
+    // We will dump 8 lines (128 bytes total) 
+    int LINES_TO_DUMP = 8; 
 
-    // Show the next 8 bytes
-    for (int i = 0; i < 8; i++) {
-        char buf[3];
-        itohex(ptr[i], buf);
-        if (ptr[i] < 16) vga_write("0"); // Padding
-        vga_write(buf);
-        vga_write(" ");
+    for (int line = 0; line < LINES_TO_DUMP; line++) {
+        unsigned long current_line_addr = addr + (line * 16);
+        
+        // 1. Print the Address Header (e.g., 000B8000)
+        char addr_buf[17]; // Fits 64-bit hex
+        itohex(current_line_addr, addr_buf);
+        
+        // Pad address to 8 characters for clean alignment
+        int addr_len = 0;
+        while(addr_buf[addr_len] != '\0') addr_len++;
+        for(int p = 0; p < (8 - addr_len); p++) vga_write("0");
+        
+        vga_write(addr_buf);
+        vga_write("  "); // Space between address and hex
+
+        // 2. Hex Dump Column (16 bytes)
+        for (int i = 0; i < 16; i++) {
+            int idx = (line * 16) + i;
+            char buf[3];
+            itohex(ptr[idx], buf);
+            
+            if (ptr[idx] < 16) vga_write("0"); // Hex padding
+            vga_write(buf);
+            vga_write(" ");
+
+            if (i == 7) {
+                vga_write(" ");
+            }
+        }
+
+        vga_write(" |"); // ASCII boundary separator
+
+        // 3. ASCII Printable Column
+        for (int i = 0; i < 16; i++) {
+            int idx = (line * 16) + i;
+            unsigned char c = ptr[idx];
+
+            // Only print readable ASCII characters; replace control/garbage bytes with a dot '.'
+            if (c >= 32 && c <= 126) {
+                char ascii_char[2] = { (char)c, '\0' };
+                vga_write(ascii_char);
+            } else {
+                vga_write(".");
+            }
+        }
+        
+        vga_write("|\n"); // Close ASCII block and wrap line
     }
 }
 void cmd_poke(char* args) {
