@@ -41,8 +41,8 @@ jobs:
             Automated build of Aero1EOS for the notebook hardware.
             **Commit:** ${{ github.sha }}
           files: |
-            alios4.iso
-            alios4.bin
+            aero1eos4.iso
+            aero1eos4.bin
           prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
