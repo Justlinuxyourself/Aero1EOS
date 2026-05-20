@@ -1459,42 +1459,45 @@ void disable_status_bar() {
   status_bar_enabled = 0;
 }
 void killscreen() {
-  vga_set_color(0x47);
-  vga_write("             __             ");
-  vga_write("          ,g$$$$Sk.         ");
-  vga_write("        ,d$$$$$$$$$$k.      ");
-  vga_write("      ,?^?$?°\'  \'?$SS$$L.   ");
-  vga_write("     ,?  $SL._  ,d$iIS$$SL  ");
-  vga_write("    j$Su%$$$$$$$$?:iIS$$Sb  ");
-  vga_write("   :?°?^4$S$$\"°?$SL:iIS$SI: ");
-  vga_write("   :\'   \',\'?$\' .  \'?LiS$$SI:");
-  vga_write("   \'                ?kiSSI? ");
-  vga_write("        :.       $k _ \'?Si7 ");
-  vga_write("       .,_,_     i$S%7·:i?\' ");
-  vga_write("      ?%uS%uo d$$?\'·?°      ");
-  vga_write("      $$$$$$$$$$i           ");
-  vga_write("      ·?$$S?                ");
-  sleep(1);
-  vga_set_color(0x74);
-  sleep(1);
-  vga_set_color(0x47);
-  sleep(1);
-  vga_set_color(0x74);
-  sleep(1);
-  vga_set_color(0x47);
-  vga_clear();
-  for (int numtios = 0; numtios < 10; numtios += 1) {
-  // Slide frequency down from 2000Hz to 100Hz
-    for (int freq = 2000; freq > 100; freq -= 5) {
-        play_sound(freq);
-        for(volatile int i = 0; i < 200000; i++); // Fast delay for smooth sliding
+    vga_set_color(0x47); // Red background, light gray text
+    vga_clear();         // Flash screen red
+    
+    // Print the skull
+    vga_write("             __             \n");
+    vga_write("          ,g$$$$Sk.         \n");
+    vga_write("        ,d$$$$$$$$$$k.      \n");
+    vga_write("      ,?^?$?°\'  \'?$SS$$L.   \n");
+    vga_write("     ,?  $SL._  ,d$iIS$$SL  \n");
+    vga_write("    j$Su%$$$$$$$$?:iIS$$Sb  \n");
+    vga_write("   :?°?^4$S$$\"°?$SL:iIS$SI: \n");
+    vga_write("   :\'   \',\'?$\' .  \'?LiS$$SI:\n");
+    vga_write("   \'                ?kiSSI? \n");
+    vga_write("        :.       $k _ \'?Si7 \n");
+    vga_write("       .,_,_     i$S%7·:i?\' \n");
+    vga_write("      ?%uS%uo d$$?\'·?°      \n");
+    vga_write("      $$$$$$$$$$i           \n");
+    vga_write("      ·?$$S?                \n");
+
+    // ENTER THE INFINITE LOOP
+    while(1) {
+        // 1. Flash to inverted colors
+        vga_set_color(0x74); 
+        for(volatile int d = 0; d < 80000000; d++); 
+
+        // 2. Flash back to red
+        vga_set_color(0x47);
+        for(volatile int d = 0; d < 80000000; d++); 
+
+        // 3. Run the dropping siren audio swoop
+        for (int freq = 2000; freq > 100; freq -= 5) {
+            play_sound(freq);
+            for(volatile int i = 0; i < 200000; i++); 
+        }
+        
+        // 4. Low flatline drone before the loop restarts
+        play_sound(80); 
+        for(volatile int i = 0; i < 60000000; i++);
     }
-    
-    // Hold a flatline low drone for a moment
-    play_sound(80); 
-    for(volatile int i = 0; i < 50000000; i++);
-    
-  }
 }
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
