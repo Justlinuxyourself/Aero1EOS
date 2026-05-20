@@ -1,8 +1,8 @@
 # --- Aero1EOS 4 Master Build System ---
 SRCDIR = src
 OBJDIR = obj
-BIN = alios4.bin
-ISO = alios4.iso
+BIN = aero1eos4.bin
+ISO = aero1eos4.iso
 PAYLOAD_H = $(SRCDIR)/section4_shell/grub_payload.h
 
 C_SOURCES = $(shell find $(SRCDIR) -name '*.c')
@@ -29,7 +29,7 @@ $(PAYLOAD_H):
 
 # --- PASS 2: Link the binary ---
 $(BIN): $(PAYLOAD_H) $(OBJ)
-	@echo "--- LINKING ALIOS BINARY ---"
+	@echo "--- LINKING AERO1EOS BINARY ---"
 	ld $(LDFLAGS) -o $(BIN) $(OBJDIR)/section1_cpu/boot.o $(filter-out $(OBJDIR)/section1_cpu/boot.o, $(OBJ))
 
 # --- PASS 3: Replace the dummy header with the REAL data ---
