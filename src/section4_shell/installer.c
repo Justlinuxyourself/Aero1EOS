@@ -40,7 +40,7 @@ void cmd_install_os() {
     vga_set_color(0x0F); // White
 
     // --- 1. BUILD SYSTEM CHECK ---
-    if (alios4_bin_len <= 1) {
+    if (aero1eos4_bin_len <= 1) {
         vga_set_color(0x0C); // Red
         vga_write("CRITICAL ERROR: Kernel payload is empty (1 byte)!\n");
         vga_write("Fix: Run 'make clean' and then 'make' twice.\n");
@@ -96,10 +96,10 @@ void cmd_install_os() {
 
     // --- 5. INSTALL ALIOS KERNEL (SECTOR 2048) ---
     vga_write("Step 3: Deploying Kernel to Sector 2048... ");
-    uint32_t k_sectors = (alios4_bin_len + 511) / 512;
+    uint32_t k_sectors = (aero1eos4_bin_len + 511) / 512;
 
     for (uint32_t i = 0; i < k_sectors; i++) {
-        ide_write_sector_bytes(2048 + i, &alios4_bin[i * 512]);
+        ide_write_sector_bytes(2048 + i, &aero1eos4_bin[i * 512]);
         if (i % 25 == 0) vga_putchar('.');
     }
     vga_write(" DONE\n");
