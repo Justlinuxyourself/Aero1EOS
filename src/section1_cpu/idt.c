@@ -138,7 +138,7 @@ void c_kernel_panic(CpuPanicState* state) {
 
     // 5. Output scary industrial register telemetry dump
     vga_write("################################################################################\n");
-    vga_write("                  CRITICAL HARDWARE FAULT DETECTED: ALIOS 4.0                  \n");
+    vga_write("                  CRITICAL HARDWARE FAULT DETECTED: AERO1EOS 4.0                  \n");
     vga_write("################################################################################\n\n");
     
     vga_write("  [!!] SYSTEM ENGINE TRAPPED EXCEPTION: ");
