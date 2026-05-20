@@ -94,7 +94,7 @@ void cmd_install_os() {
     }
     vga_write("DONE\n");
 
-    // --- 5. INSTALL ALIOS KERNEL (SECTOR 2048) ---
+    // --- 5. INSTALL AERO1EOS KERNEL (SECTOR 2048) ---
     vga_write("Step 3: Deploying Kernel to Sector 2048... ");
     uint32_t k_sectors = (aero1eos4_bin_len + 511) / 512;
 
