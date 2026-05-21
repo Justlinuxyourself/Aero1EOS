@@ -63,26 +63,23 @@ int alifs_create(char* name, char* data) {
     inodes[slot].active = 1;
     inodes[slot].is_dir = 0; 
 
-    // --- FIX: Create an aligned, clean 512-byte sector data buffer ---
+    // --- FIX: Zero out the bounce buffer explicitly ---
     uint8_t write_bounce_buffer[512] __attribute__((aligned(8)));
-    
-    // 1. Zero out the entire buffer block to eliminate random garbage trailing values
     for (int b = 0; b < 512; b++) {
-        write_bounce_buffer[b] = 0;
+        write_bounce_buffer[b] = 0; // Wipe old stack frame values cleanly!
     }
 
-    // 2. Safely copy the text string data into our clean buffer block
     int data_len = strlen(data);
-    if (data_len > 511) data_len = 511; // Ensure we never spill past a single sector boundary
+    if (data_len > 511) data_len = 511; // Leave room for a terminal zero if needed
     
     for (int b = 0; b < data_len; b++) {
         write_bounce_buffer[b] = (uint8_t)data[b];
     }
 
-    // 3. Send the clean, padded 512-byte sector straight to the disk hardware
+    // Send clean, predictable sector bytes to drive
     ide_write_sector_bytes(inodes[slot].start_lba, write_bounce_buffer);
     
-    // Save the inode directory table updates
+    // Save inode entry alterations
     ide_write_sector_bytes(ALIFS_START_LBA + 1, inode_sector);
     return 0;
 }
