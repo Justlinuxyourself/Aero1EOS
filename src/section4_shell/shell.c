@@ -1224,10 +1224,15 @@ void cmd_edit(char* args) {
     vga_write("\n--- Aero1EOS 4 Multiline Notebook ---\n");
     vga_write("File: "); vga_write(filename); vga_write("\n");
 
-    static char note_content[512] __attribute__((aligned(8)));
+    static char note_content[512];
     for(int i = 0; i < 512; i++) note_content[i] = 0;
 
     kgets_multiline(note_content, 511);
+
+    // Fallback protection: if text is empty, prevent empty drive loops
+    if (strlen(note_content) == 0) {
+        strcpy(note_content, " "); // Force at least one valid character space
+    }
 
     if (alifs_create(filename, note_content) == 0) {
         vga_write("Note saved to AliFS.\n");
