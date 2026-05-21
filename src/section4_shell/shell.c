@@ -1625,9 +1625,6 @@ void cmd_cmatrix(char* args) {
 
     volatile unsigned short* vga = (volatile unsigned short*)VGA_ADDRESS;
     int running = 1;
-
-    volatile unsigned short* vga = (volatile unsigned short*)VGA_ADDRESS;
-    int running = 1;
     uint32_t loops = 0;
 
     while (running) {
