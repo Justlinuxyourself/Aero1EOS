@@ -900,48 +900,51 @@ void cmd_read_disk(char* args) {
 	vga_write("------------------------------------------\n");
 }
 void cmd_write_disk(char* args) {
-    // 1. Check for empty input
     if (args == 0 || *args == '\0') {
         vga_write("Usage: write_sector <lba> <string>\n");
         vga_write("Example: write_sector 10 Hello_Aero1EOS\n");
         return;
     }
 
-    
     char* lba_str = args;
     char* data_str = 0;
 
-    
-    for (int i = 0; args[i] != '\0'; i++) {
-        if (args[i] == ' ') {
-            args[i] = '\0';        // Null-terminate the LBA string
-            data_str = &args[i+1]; // Point to the start of the data
+    // Correctly loop over the string to locate the true data boundaries
+    for (int i = 0; lba_str[i] != '\0'; i++) {
+        if (lba_str[i] == ' ') {
+            lba_str[i] = '\0';
+            data_str = &lba_str[i + 1];
             break;
         }
     }
 
-    if (!data_str) {
+    // Handle extra spaces if the user types multiple spaces before the word
+    if (data_str) {
+        while (*data_str == ' ') {
+            data_str++;
+        }
+    }
+
+    if (!data_str || *data_str == '\0') {
         vga_write("Error: Missing data string.\n");
         return;
     }
 
-    
     uint32_t lba = (uint32_t)atoi_custom(lba_str);
 
-    
+    // Dedicated, isolated 512-byte buffer
     static uint8_t sector_buffer[512];
     for (int i = 0; i < 512; i++) {
         sector_buffer[i] = 0;
     }
 
-    
+    // Safely copy string payload into the padded sector block
     int len = 0;
-    while (data_str[len] != '\0' && len < 511) {
+    while (data_str[len] != '\0' && len < 512) {
         sector_buffer[len] = (uint8_t)data_str[len];
         len++;
     }
 
-    
     vga_write("Aero1EOS Disk: Writing to LBA ");
     vga_write(lba_str); 
     vga_write("... ");
