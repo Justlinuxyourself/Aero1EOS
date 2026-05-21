@@ -1,4 +1,4 @@
-#include "ata.h"
+
 
 // Standard Primary ATA Bus IO Ports
 #define ATA_REG_DATA       0x1F0
