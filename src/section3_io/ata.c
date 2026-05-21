@@ -23,6 +23,7 @@
 #define ATA_CMD_READ       0x20
 #define ATA_CMD_WRITE      0x30
 #define ATA_CMD_CACHE_FLUSH 0xE7
+#define ATA_CMD_IDENTIFY   0xEC
 
 // Low-level Inline Assembly Wrapper functions for IO Ports
 static inline void outb(uint16_t port, uint8_t val) {
@@ -167,4 +168,58 @@ int ide_write_sector_bytes(uint32_t lba, uint8_t* buffer) {
     if (ata_wait_ready() < 0) return -1;
 
     return 0;
+}
+/**
+ * Dynamically queries the primary ATA drive using the IDENTIFY command
+ * to extract the absolute total number of addressable LBA sectors.
+ */
+uint32_t ide_get_total_sectors(void) {
+    // Wait for drive to be clear to receive commands
+    if (ata_wait_ready() < 0) {
+        return 0; 
+    }
+
+    // Select the primary master drive
+    outb(ATA_REG_DRV_SEL, 0xA0);
+    ata_io_delay();
+
+    // Sector count and LBA registers must be zeroed for the IDENTIFY command
+    outb(ATA_REG_SEC_COUNT, 0);
+    outb(ATA_REG_LBA_LOW, 0);
+    outb(ATA_REG_LBA_MID, 0);
+    outb(ATA_REG_LBA_HIGH, 0);
+
+    // Issue the IDENTIFY command
+    outb(ATA_REG_COMMAND, ATA_CMD_IDENTIFY);
+    ata_io_delay();
+
+    // Check if the drive is alive and pulling data into its SRAM cache
+    uint8_t status = inb(ATA_REG_STATUS);
+    if (status == 0) {
+        return 0; // No drive connected to the primary bus
+    }
+
+    // Wait for the drive buffer to open up for a read transmission burst
+    if (ata_wait_drq() < 0) {
+        return 0;
+    }
+
+    // Read the 256 words (512 bytes) of identification data configuration matrix
+    uint16_t identify_data[256];
+    for (int i = 0; i < 256; i++) {
+        identify_data[i] = inw(ATA_REG_DATA);
+    }
+
+    // ATA String Specification: Words 60 and 61 contain the total number of 28-bit LBA sectors
+    uint32_t total_sectors = *((uint32_t*)&identify_data[60]);
+
+    if (total_sectors == 0) {
+        // Fallback check: If LBA28 is 0, check if it's an older CHS-only geometry drive
+        uint32_t cylinders = identify_data[1];
+        uint32_t heads = identify_data[3];
+        uint32_t sectors_per_track = identify_data[6];
+        total_sectors = cylinders * heads * sectors_per_track;
+    }
+
+    return total_sectors;
 }
