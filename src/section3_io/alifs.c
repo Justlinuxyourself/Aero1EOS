@@ -36,12 +36,11 @@ int alifs_create(char* name, char* data) {
     if (strcmp(current_path, "/") == 0) {
         strcpy(full_path, name);
     } else {
-        // Simple prefixing: "folder/file"
         strcpy(full_path, current_path);
         int len = strlen(full_path);
         full_path[len] = '/';
         full_path[len+1] = '\0';
-        // Manual append
+        
         int i = 0;
         while(name[i]) {
             full_path[len+1+i] = name[i];
@@ -60,14 +59,32 @@ int alifs_create(char* name, char* data) {
 
     if (slot == -1) return -1;
 
-    // Use full_path instead of name
     strcpy(inodes[slot].filename, full_path);
     inodes[slot].start_lba = ALIFS_START_LBA + 2 + slot;
     inodes[slot].size = strlen(data);
     inodes[slot].active = 1;
-    inodes[slot].is_dir = 0; // It's a file
+    inodes[slot].is_dir = 0; 
 
-    ide_write_sector_bytes(inodes[slot].start_lba, (uint8_t*)data);
+    // --- FIX: Create an aligned, clean 512-byte sector data buffer ---
+    uint8_t write_bounce_buffer[512] __attribute__((aligned(8)));
+    
+    // 1. Zero out the entire buffer block to eliminate random garbage trailing values
+    for (int b = 0; b < 512; b++) {
+        write_bounce_buffer[b] = 0;
+    }
+
+    // 2. Safely copy the text string data into our clean buffer block
+    int data_len = strlen(data);
+    if (data_len > 511) data_len = 511; // Ensure we never spill past a single sector boundary
+    
+    for (int b = 0; b < data_len; b++) {
+        write_bounce_buffer[b] = (uint8_t)data[b];
+    }
+
+    // 3. Send the clean, padded 512-byte sector straight to the disk hardware
+    ide_write_sector_bytes(inodes[slot].start_lba, write_bounce_buffer);
+    
+    // Save the inode directory table updates
     ide_write_sector_bytes(ALIFS_START_LBA + 1, inode_sector);
     return 0;
 }
