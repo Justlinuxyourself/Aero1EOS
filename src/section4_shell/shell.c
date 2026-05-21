@@ -1653,6 +1653,7 @@ void shell_init() {
     shell_register_command("disablestat", "DISABLE STATus bar", disable_status_bar);
     shell_register_command("enablestat", "ENABLE STATus bar", enable_status_bar);
     shell_register_command("killscreen", "KillScreen", killscreen);
+    shell_register_command("testposix", "Verify POSIX open/read/write/close functionality", cmd_test_posix);
 }
 
 void shell_dispatch(char* buffer) {
