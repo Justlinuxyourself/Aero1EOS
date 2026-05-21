@@ -1,5 +1,5 @@
-
-
+#include <stdint.h>
+#include <stdbool.h>
 // Standard Primary ATA Bus IO Ports
 #define ATA_REG_DATA       0x1F0
 #define ATA_REG_FEATURES   0x1F1
