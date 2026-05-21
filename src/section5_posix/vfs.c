@@ -55,10 +55,13 @@ int posix_open(const char* filename) {
     file_table[assigned_fd].data_ptr = private_storage;
     file_table[assigned_fd].capacity = FILE_MAX_CAPACITY;
 
-    if (shared_buffer) {
-        // Existing file: load data and set cursor to start
-        strcpy(private_storage, shared_buffer);
-        file_table[assigned_fd].size = strlen(shared_buffer);
+        if (shared_buffer) {
+        // Force a hard bound truncation copy instead of open-ended strcpy
+        for(int i = 0; i < FILE_MAX_CAPACITY - 1 && shared_buffer[i] != '\0'; i++) {
+            private_storage[i] = shared_buffer[i];
+        }
+        private_storage[FILE_MAX_CAPACITY - 1] = '\0'; // Hard limit enforcement
+        file_table[assigned_fd].size = strlen(private_storage);
         file_table[assigned_fd].offset = 0; 
     } else {
         // Brand new file
