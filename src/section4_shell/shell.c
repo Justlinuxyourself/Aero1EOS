@@ -1618,6 +1618,14 @@ void cmd_cmatrix(char* args) {
         matrix_delay[i] = (local_rand % 3); 
     }
 
+    // Drain any leftover scancodes from pressing Enter
+    while (inb(0x64) & 0x01) {
+        inb(0x60); 
+    }
+
+    volatile unsigned short* vga = (volatile unsigned short*)VGA_ADDRESS;
+    int running = 1;
+
     volatile unsigned short* vga = (volatile unsigned short*)VGA_ADDRESS;
     int running = 1;
     uint32_t loops = 0;
