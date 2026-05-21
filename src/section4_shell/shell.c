@@ -120,6 +120,8 @@ extern int current_tty;
 extern unsigned char current_vga_color;
 extern void vga_clear();
 extern int status_bar_enabled;
+#define CMATRIX_COLS 80
+#define CMATRIX_ROWS 24 // Leave row 24 safe for status bar!
 /* --- String Helpers --- */
 int strcmp(const char* s1, const char* s2) {
     while (*s1 && (*s1 == *s2)) { s1++; s2++; }
@@ -1593,6 +1595,96 @@ void cmd_test_posix(char* args) {
     posix_close(fd_read);
     vga_write("=== POSIX LAYER TEST COMPLETE ===\n\n");
 }
+
+void cmd_cmatrix(char* args) {
+    (void)args;
+
+    // Track the row index for the falling drop in each column
+    int matrix_pos[CMATRIX_COLS];
+    // Track how fast or delayed each column is
+    int matrix_delay[CMATRIX_COLS];
+
+    // Seed local PRNG state using your existing kernel hooks
+    uint32_t local_rand = cmos_get_sec() + get_uptime_ms();
+
+    // Clear the screen completely to black first (attribute 0x00)
+    vga_set_color(0x00);
+    vga_clear();
+
+    // Initialize columns at random starting rows above the screen
+    for (int i = 0; i < CMATRIX_COLS; i++) {
+        local_rand = local_rand * 1103515245 + 12345;
+        matrix_pos[i] = -((local_rand / 65536) % CMATRIX_ROWS);
+        matrix_delay[i] = (local_rand % 3); 
+    }
+
+    volatile unsigned short* vga = (volatile unsigned short*)VGA_ADDRESS;
+    int running = 1;
+    uint32_t loops = 0;
+
+    while (running) {
+        // Keep clock ticking if the status bar is enabled
+        if (loops % 10 == 0) {
+            vga_draw_status_bar();
+        }
+
+        for (int c = 0; c < CMATRIX_COLS; c++) {
+            // Speed control based on the column's assigned delay factor
+            if (loops % (matrix_delay[c] + 1) != 0) continue;
+
+            int current_row = matrix_pos[c];
+
+            // 1. Draw leading edge (Bright White on Black: 0x0F)
+            if (current_row >= 0 && current_row < CMATRIX_ROWS) {
+                local_rand = local_rand * 1103515245 + 12345;
+                char glyph = 33 + ((local_rand / 65536) % 93); // Printable ASCII
+                vga[(current_row * CMATRIX_COLS) + c] = (unsigned short)glyph | (0x0F << 8);
+            }
+
+            // 2. Fade the previous head to Light Green (0x0A)
+            if (current_row - 1 >= 0 && current_row - 1 < CMATRIX_ROWS) {
+                int idx = ((current_row - 1) * CMATRIX_COLS) + c;
+                vga[idx] = (vga[idx] & 0x00FF) | (0x0A << 8);
+            }
+
+            // 3. Fade older trailing characters to Dark Green (0x02)
+            if (current_row - 4 >= 0 && current_row - 4 < CMATRIX_ROWS) {
+                int idx = ((current_row - 4) * CMATRIX_COLS) + c;
+                vga[idx] = (vga[idx] & 0x00FF) | (0x02 << 8);
+            }
+
+            // 4. Wipe the tail of the stream to Black space
+            if (current_row - 12 >= 0 && current_row - 12 < CMATRIX_ROWS) {
+                vga[((current_row - 12) * CMATRIX_COLS) + c] = (unsigned short)' ' | (0x00 << 8);
+            }
+
+            // Advance the stream
+            matrix_pos[c]++;
+
+            // Loop reset once the trailing dark space passes off-screen
+            if (matrix_pos[c] - 12 >= CMATRIX_ROWS) {
+                matrix_pos[c] = 0;
+                local_rand = local_rand * 1103515245 + 12345;
+                matrix_delay[c] = (local_rand % 3);
+            }
+        }
+
+        // Check the keyboard data port (0x64). Exit instantly if any key is typed.
+        if (inb(0x64) & 0x01) {
+            inb(0x60); // Flush the scancode out of the controller
+            running = 0;
+            break;
+        }
+
+        // Execution delay loop balanced for slower mobile emulators
+        for (volatile int d = 0; d < 1200000; d++);
+        loops++;
+    }
+
+    // Clean up and return to default colors
+    vga_set_color(NOTEBOOK_YELLOW);
+    vga_clear();
+}
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
     command_node_t* new_node = (command_node_t*)kmalloc(sizeof(command_node_t));
@@ -1662,6 +1754,7 @@ void shell_init() {
     shell_register_command("enablestat", "ENABLE STATus bar", enable_status_bar);
     shell_register_command("killscreen", "KillScreen", killscreen);
     shell_register_command("testposix", "Verify POSIX open/read/write/close functionality", cmd_test_posix);
+    shell_register_command("cmatrix", "Matrix digital rain screen effect", cmd_cmatrix);
 }
 
 void shell_dispatch(char* buffer) {
