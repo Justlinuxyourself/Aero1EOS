@@ -1,152 +1,170 @@
-#include "../section1_cpu/io.h"
-#include <stdint.h>
+#include "ata.h"
 
-/* ATA Status Bits */
-#define STATUS_BSY  0x80
-#define STATUS_RDY  0x40
-#define STATUS_DF   0x20
-#define STATUS_DRQ  0x08
-#define STATUS_ERR  0x01
+// Standard Primary ATA Bus IO Ports
+#define ATA_REG_DATA       0x1F0
+#define ATA_REG_FEATURES   0x1F1
+#define ATA_REG_SEC_COUNT  0x1F2
+#define ATA_REG_LBA_LOW    0x1F3
+#define ATA_REG_LBA_MID    0x1F4
+#define ATA_REG_LBA_HIGH   0x1F5
+#define ATA_REG_DRV_SEL    0x1F6
+#define ATA_REG_COMMAND    0x1F7
+#define ATA_REG_STATUS     0x1F7
 
-/* ATA Ports */
-#define ATA_PRIMARY_DATA         0x1F0
-#define ATA_PRIMARY_ERR_FEATURES 0x1F1
-#define ATA_PRIMARY_SEC_COUNT    0x1F2
-#define ATA_PRIMARY_LBA_LOW      0x1F3
-#define ATA_PRIMARY_LBA_MID      0x1F4
-#define ATA_PRIMARY_LBA_HIGH     0x1F5
-#define ATA_PRIMARY_DRIVE_SEL    0x1F6
-#define ATA_PRIMARY_COMMAND      0x1F7
-#define ATA_PRIMARY_CONTROL      0x3F6
+// ATA Status Register Bits
+#define ATA_STATUS_ERR     0x01  // Error occurred
+#define ATA_STATUS_DRQ     0x08  // Data Request (Ready to transfer data)
+#define ATA_STATUS_SRV     0x10  // Service request
+#define ATA_STATUS_DF      0x20  // Drive Fault
+#define ATA_STATUS_RDY     0x40  // Drive Ready
+#define ATA_STATUS_BSY     0x80  // Drive Busy
 
-extern uint16_t inw(uint16_t port);
-extern void outw(uint16_t port, uint16_t data);
+// ATA Commands
+#define ATA_CMD_READ       0x20
+#define ATA_CMD_WRITE      0x30
+#define ATA_CMD_CACHE_FLUSH 0xE7
 
-/* 
- * 400ns delay required by the ATA spec after drive switching/commands.
- * Reading the Control Register 4 times is the standard way to achieve this.
- */
-static void ide_io_wait() {
-    inb(ATA_PRIMARY_CONTROL);
-    inb(ATA_PRIMARY_CONTROL);
-    inb(ATA_PRIMARY_CONTROL);
-    inb(ATA_PRIMARY_CONTROL);
+// Low-level Inline Assembly Wrapper functions for IO Ports
+static inline void outb(uint16_t port, uint8_t val) {
+    __asm__ volatile ("outb %0, %1" : : "a"(val), "Nd"(port));
 }
 
-/*
- * Advanced polling: Checks for BSY, RDY, and ERR.
- * Returns 0 on success, -1 on hardware error or missing drive.
+static inline uint8_t inb(uint16_t port) {
+    uint8_t ret;
+    __asm__ volatile ("inb %1, %0" : "=a"(ret) : "Nd"(port));
+    return ret;
+}
+
+static inline void outw(uint16_t port, uint16_t val) {
+    __asm__ volatile ("outw %0, %1" : : "a"(val), "Nd"(port));
+}
+
+static inline uint16_t inw(uint16_t port) {
+    uint16_t ret;
+    __asm__ volatile ("inw %1, %0" : "=a"(ret) : "Nd"(port));
+    return ret;
+}
+
+/**
+ * 400ns Hardware Delay Loop
+ * Reading the Status Register alternate port or primary port 4 times 
+ * forces the bus to naturally create an intentional execution buffer delay.
  */
-static int ide_poll() {
+static void ata_io_delay(void) {
+    inb(ATA_REG_STATUS);
+    inb(ATA_REG_STATUS);
+    inb(ATA_REG_STATUS);
+    inb(ATA_REG_STATUS);
+}
+
+/**
+ * Poll the drive status until it drops the BSY bit and clears errors.
+ * Returns 0 on success, -1 if a drive fault/error is caught.
+ */
+static int ata_wait_ready(void) {
     while (1) {
-        uint8_t status = inb(ATA_PRIMARY_COMMAND);
-
-        // Check for floating bus (no drive connected)
-        if (status == 0xFF) return -1;
-
-        // Check for Drive Fault or Error bits
-        if (status & (STATUS_ERR | STATUS_DF)) return -1;
-
-        // Drive is only ready if BSY is 0 and RDY is 1
-        if (!(status & STATUS_BSY) && (status & STATUS_RDY)) {
-            return 0;
+        uint8_t status = inb(ATA_REG_STATUS);
+        
+        // If the drive is no longer busy, evaluate flag states
+        if (!(status & ATA_STATUS_BSY)) {
+            if (status & (ATA_STATUS_ERR | ATA_STATUS_DF)) {
+                return -1; // Device reporting active fault state
+            }
+            return 0; // Device is completely clear
         }
     }
 }
 
-static void ide_wait_drq() {
-    while (!(inb(ATA_PRIMARY_COMMAND) & STATUS_DRQ));
-}
-
-void ide_read_sector_bytes(uint32_t lba, uint8_t* buffer) {
-    if (ide_poll() < 0) return;
-
-    // Select Drive (Master) and LBA bits 24-27
-    outb(ATA_PRIMARY_DRIVE_SEL, 0xE0 | ((lba >> 24) & 0x0F));
-    ide_io_wait();
-
-    outb(ATA_PRIMARY_SEC_COUNT, 1);
-    outb(ATA_PRIMARY_LBA_LOW,  (uint8_t)lba);
-    outb(ATA_PRIMARY_LBA_MID,  (uint8_t)(lba >> 8));
-    outb(ATA_PRIMARY_LBA_HIGH, (uint8_t)(lba >> 16));
-    outb(ATA_PRIMARY_COMMAND,  0x20); // READ SECTORS
-
-    ide_io_wait();
-
-    // Wait for the drive to process the command and set DRQ
-    if (ide_poll() < 0) return;
-    ide_wait_drq();
-
-    for (int i = 0; i < 256; i++) {
-        uint16_t data = inw(ATA_PRIMARY_DATA);
-        buffer[i * 2] = (uint8_t)data;
-        buffer[i * 2 + 1] = (uint8_t)(data >> 8);
-    }
-}
-
-void ide_write_sector_bytes(uint32_t lba, uint8_t* buffer) {
-    if (ide_poll() < 0) return;
-
-    outb(ATA_PRIMARY_DRIVE_SEL, 0xE0 | ((lba >> 24) & 0x0F));
-    ide_io_wait();
-
-    outb(ATA_PRIMARY_SEC_COUNT, 1);
-    outb(ATA_PRIMARY_LBA_LOW,  (uint8_t)lba);
-    outb(ATA_PRIMARY_LBA_MID,  (uint8_t)(lba >> 8));
-    outb(ATA_PRIMARY_LBA_HIGH, (uint8_t)(lba >> 16));
-    outb(ATA_PRIMARY_COMMAND,  0x30); // WRITE SECTORS
-
-    ide_io_wait();
-
-    if (ide_poll() < 0) return;
-    ide_wait_drq();
-
-    for (int i = 0; i < 256; i++) {
-        uint16_t data = buffer[i * 2] | (buffer[i * 2 + 1] << 8);
-        outw(ATA_PRIMARY_DATA, data);
-    }
-
-    // Flush cache to ensure data is written to the platter
-    ide_io_wait();
-    outb(ATA_PRIMARY_COMMAND, 0xE7); // CACHE FLUSH
-    ide_poll();
-}
-
-uint32_t ide_get_total_sectors() {
-    if (ide_poll() < 0) return 0;
-
-    outb(ATA_PRIMARY_DRIVE_SEL, 0xA0); // Select Master
-    ide_io_wait();
-    outb(ATA_PRIMARY_COMMAND, 0xEC);  // IDENTIFY
-
-    if (ide_poll() < 0) return 0;
-    ide_wait_drq();
-
-    uint16_t info[256];
-    for (int i = 0; i < 256; i++) {
-        info[i] = inw(ATA_PRIMARY_DATA);
-    }
-
-    // LBA28 total sectors at words 60 and 61
-    return (uint32_t)info[60] | ((uint32_t)info[61] << 16);
-}
-
-uint32_t ide_calculate_pseudo_used_sectors(uint32_t max_sectors_to_scan) {
-    uint8_t buffer[512];
-    uint32_t used = 0;
-
-    for (uint32_t s = 0; s < max_sectors_to_scan; s++) {
-        // Clear buffer to prevent false positives from previous reads
-        for (int b = 0; b < 512; b++) buffer[b] = 0;
-
-        ide_read_sector_bytes(s, buffer);
-
-        for (int i = 0; i < 512; i++) {
-            if (buffer[i] != 0) {
-                used++;
-                break; 
+/**
+ * Explicit Handshake Loop required specifically before pushing data words
+ * to ensure the inner hardware buffer is configured to consume values.
+ */
+static int ata_wait_drq(void) {
+    while (1) {
+        uint8_t status = inb(ATA_REG_STATUS);
+        
+        if (!(status & ATA_STATUS_BSY)) {
+            if (status & (ATA_STATUS_ERR | ATA_STATUS_DF)) {
+                return -1;
+            }
+            if (status & ATA_STATUS_DRQ) {
+                return 0; // Data Request line is active! Ready to read/write!
             }
         }
     }
-    return used;
+}
+
+/**
+ * Read 512 Bytes from a targeted disk sector
+ */
+int ide_read_sector_bytes(uint32_t lba, uint8_t* buffer) {
+    if (ata_wait_ready() < 0) return -1;
+
+    // Send drive select, geometry parameters, and upper 4 bits of LBA
+    outb(ATA_REG_DRV_SEL, 0xE0 | ((lba >> 24) & 0x0F));
+    ata_io_delay();
+    
+    // Send standard sector size count parameters (1 Sector = 512 bytes)
+    outb(ATA_REG_SEC_COUNT, 1);
+    
+    // Disperse remaining LBA segments across target out-ports
+    outb(ATA_REG_LBA_LOW,  (uint8_t)lba);
+    outb(ATA_REG_LBA_MID,  (uint8_t)(lba >> 8));
+    outb(ATA_REG_LBA_HIGH, (uint8_t)(lba >> 16));
+    
+    // Issue Read Command
+    outb(ATA_REG_COMMAND, ATA_CMD_READ);
+    
+    // WAIT for the drive to process the read request and fill its SRAM buffer
+    if (ata_wait_drq() < 0) return -1;
+    
+    // Read 256 Words (512 Bytes) from the hardware data port
+    uint16_t* word_buf = (uint16_t*)buffer;
+    for (int i = 0; i < 256; i++) {
+        word_buf[i] = inw(ATA_REG_DATA);
+    }
+    
+    return 0;
+}
+
+/**
+ * Write 512 Bytes cleanly to a targeted disk sector
+ */
+int ide_write_sector_bytes(uint32_t lba, uint8_t* buffer) {
+    if (ata_wait_ready() < 0) return -1;
+
+    // Send drive select and upper LBA bits
+    outb(ATA_REG_DRV_SEL, 0xE0 | ((lba >> 24) & 0x0F));
+    ata_io_delay();
+    
+    // Set Sector Count to 1
+    outb(ATA_REG_SEC_COUNT, 1);
+    
+    // Disperse LBA segments
+    outb(ATA_REG_LBA_LOW,  (uint8_t)lba);
+    outb(ATA_REG_LBA_MID,  (uint8_t)(lba >> 8));
+    outb(ATA_REG_LBA_HIGH, (uint8_t)(lba >> 16));
+    
+    // Issue Write Command
+    outb(ATA_REG_COMMAND, ATA_CMD_WRITE);
+    
+    // CRITICAL HANDSHAKE: Wait for the controller to assert DRQ before streaming!
+    // This stops the drive from dropping our data into a closed port void!
+    if (ata_wait_drq() < 0) return -1;
+    
+    // Push 256 Words (512 Bytes) to the hardware data port
+    uint16_t* word_buf = (uint16_t*)buffer;
+    for (int i = 0; i < 256; i++) {
+        outw(ATA_REG_DATA, word_buf[i]);
+    }
+    
+    // Enforce 400ns line clear delay following data streaming burst
+    ata_io_delay();
+    
+    // FLUSH CACHE: Forces QEMU/VirtualBox to commit the virtual buffer data 
+    // down into the actual host filesystem .qcow2 or raw image block container.
+    outb(ATA_REG_COMMAND, ATA_CMD_CACHE_FLUSH);
+    if (ata_wait_ready() < 0) return -1;
+
+    return 0;
 }
