@@ -1728,7 +1728,7 @@ void cmd_dvd(char* args) {
     uint32_t loops = 0;
 
     while (running) {
-        if (loops % 20 == 0) {
+        if (loops % 1 == 0) {
             vga_draw_status_bar();
         }
 
