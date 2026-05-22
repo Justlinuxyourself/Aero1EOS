@@ -1631,7 +1631,7 @@ void cmd_cmatrix(char* args) {
 
     while (running) {
         // Keep clock ticking if the status bar is enabled
-        if (loops % 10 == 0) {
+        if (loops % 1 == 0) {
             vga_draw_status_bar();
         }
 
