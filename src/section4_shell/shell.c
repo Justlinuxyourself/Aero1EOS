@@ -1692,6 +1692,7 @@ void cmd_cmatrix(char* args) {
     vga_set_color(NOTEBOOK_YELLOW);
     vga_clear();
 }
+
 void cmd_dvd(char* args) {
     (void)args;
 
@@ -1712,12 +1713,15 @@ void cmd_dvd(char* args) {
     int color_index = 0;
     unsigned char current_color = colors[color_index];
 
-    // Clear screen
+    // Clear screen entirely
     vga_set_color(0x00);
     vga_clear();
 
-    // Flush any leftover keyboard inputs
-    while (inb(0x64) & 0x01) { inb(0x60); }
+    // === CRITICAL FLUSH ===
+    // Drain the keyboard controller completely before starting
+    while (inb(0x64) & 0x01) { 
+        inb(0x60); 
+    }
 
     volatile unsigned short* vga = (volatile unsigned short*)VGA_ADDRESS;
     int running = 1;
@@ -1801,19 +1805,22 @@ void cmd_dvd(char* args) {
             }
         }
 
-        // 5. BREAK LOOP ON KEYPRESS
+        // 5. SECURE BREAK LOOP ON ACTUAL NEW KEYPRESS ONLY
         if (inb(0x64) & 0x01) {
-            inb(0x60); 
-            running = 0;
-            break;
+            unsigned char code = inb(0x60);
+            // Only exit if it's a "Make code" (key down, below 0x80)
+            if (code < 0x80) {
+                running = 0;
+                break;
+            }
         }
 
-        // Delay loop for Limbo
+        // Delay loop for Limbo (Adjust this value up or down to speed/slow it)
         for (volatile int d = 0; d < 4000000; d++);
         loops++;
     }
 
-    // Reset shell layout back to original theme state
+    // Reset shell layout back to original notebook theme state cleanly
     vga_set_color(NOTEBOOK_YELLOW);
     vga_clear();
 }
