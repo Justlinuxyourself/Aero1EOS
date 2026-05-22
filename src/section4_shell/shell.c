@@ -1606,7 +1606,7 @@ void cmd_cmatrix(char* args) {
     // Track how fast or delayed each column is
     int matrix_delay[CMATRIX_COLS];
 
-    // Seed local PRNG state using your existing kernel hooks
+    // Seed local PRNG state using kernel hooks
     uint32_t local_rand = cmos_get_sec() + get_uptime_ms();
 
     // Clear the screen completely to black first (attribute 0x00)
