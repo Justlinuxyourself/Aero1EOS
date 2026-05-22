@@ -1678,9 +1678,12 @@ void cmd_cmatrix(char* args) {
 
         // Check the keyboard data port (0x64). Exit instantly if any key is typed.
         if (inb(0x64) & 0x01) {
-            inb(0x60); // Flush the scancode out of the controller
-            running = 0;
-            break;
+            unsigned char code = inb(0x60);
+            // Only exit if it's a "Make code" (key down, below 0x80)
+            if (code < 0x80) {
+                running = 0;
+                break;
+            }
         }
 
         // Execution delay loop balanced for slower mobile emulators
