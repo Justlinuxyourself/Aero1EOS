@@ -1690,6 +1690,126 @@ void cmd_cmatrix(char* args) {
     vga_set_color(NOTEBOOK_YELLOW);
     vga_clear();
 }
+#define STREAM_COUNT 40
+#define HYPER_COLS 80
+#define HYPER_ROWS 24 // Leave row 24 safe for your clock!
+
+typedef struct {
+    int angle_x;  // Horizontal trajectory direction (-100 to 100)
+    int angle_y;  // Vertical trajectory direction (-100 to 100)
+    int z;        // Distance from center (Max depth 40 down to 1)
+    char glyph;   // The current leading character
+} hyper_stream_t;
+
+void cmd_hyperspace(char* args) {
+    (void)args;
+
+    hyper_stream_t streams[STREAM_COUNT];
+    uint32_t local_rand = cmos_get_sec() + get_uptime_ms();
+
+    // Clear screen to total pitch black space
+    vga_set_color(0x00);
+    vga_clear();
+
+    // Initialize the warp vectors
+    for (int i = 0; i < STREAM_COUNT; i++) {
+        local_rand = local_rand * 1103515245 + 12345;
+        streams[i].angle_x = ((local_rand / 65536) % 160) - 80;
+        
+        local_rand = local_rand * 1103515245 + 12345;
+        streams[i].angle_y = ((local_rand / 65536) % 60) - 30;
+        
+        local_rand = local_rand * 1103515245 + 12345;
+        streams[i].z = ((local_rand / 65536) % 40) + 1;
+        streams[i].glyph = 33 + (local_rand % 93);
+    }
+
+    // Flush out the leftover enter scancodes
+    while (inb(0x64) & 0x01) { inb(0x60); }
+
+    volatile unsigned short* vga = (volatile unsigned short*)VGA_ADDRESS;
+    int running = 1;
+    uint32_t loops = 0;
+
+    while (running) {
+        if (loops % 15 == 0) {
+            vga_draw_status_bar();
+        }
+
+        for (int i = 0; i < STREAM_COUNT; i++) {
+            // 1. Calculate positions across different depths to simulate a tail fade
+            // Current Head
+            int x0 = 40 + (streams[i].angle_x * 10) / streams[i].z;
+            int y0 = 12 + (streams[i].angle_y * 10) / streams[i].z;
+
+            // Body (Slightly further back in depth)
+            int x1 = 40 + (streams[i].angle_x * 10) / (streams[i].z + 2);
+            int y1 = 12 + (streams[i].angle_y * 10) / (streams[i].z + 2);
+
+            // Tail (Farther back)
+            int x2 = 40 + (streams[i].angle_x * 10) / (streams[i].z + 5);
+            int y2 = 12 + (streams[i].angle_y * 10) / (streams[i].z + 5);
+
+            // Clear Tail Tip (Furthest back, wipes out previous frames)
+            int cx = 40 + (streams[i].angle_x * 10) / (streams[i].z + 8);
+            int cy = 12 + (streams[i].angle_y * 10) / (streams[i].z + 8);
+
+            // Wipe out the back edge of the tail
+            if (cx >= 0 && cx < HYPER_COLS && cy >= 0 && cy < HYPER_ROWS) {
+                vga[(cy * HYPER_COLS) + cx] = (unsigned short)' ' | (0x00 << 8);
+            }
+
+            // Draw the Dark Green Tail section
+            if (x2 >= 0 && x2 < HYPER_COLS && y2 >= 0 && y2 < HYPER_ROWS) {
+                vga[(y2 * HYPER_COLS) + x2] = (vga[(y2 * HYPER_COLS) + x2] & 0x00FF) | (0x02 << 8);
+            }
+
+            // Draw the Bright Green Body section
+            if (x1 >= 0 && x1 < HYPER_COLS && y1 >= 0 && y1 < HYPER_ROWS) {
+                vga[(y1 * HYPER_COLS) + x1] = (vga[(y1 * HYPER_COLS) + x1] & 0x00FF) | (0x0A << 8);
+            }
+
+            // Draw the leading Head character (Bright White: 0x0F)
+            if (x0 >= 0 && x0 < HYPER_COLS && y0 >= 0 && y0 < HYPER_ROWS) {
+                vga[(y0 * HYPER_COLS) + x0] = (unsigned short)streams[i].glyph | (0x0F << 8);
+            }
+
+            // Move closer
+            streams[i].z -= 1;
+
+            // Mutate characters slightly as they move for that matrix flicker vibe
+            if (loops % 4 == 0) {
+                local_rand = local_rand * 1103515245 + 12345;
+                streams[i].glyph = 33 + (local_rand % 93);
+            }
+
+            // Boundary reset: If it hits the screen edge or flies past you, reset to center background
+            if (streams[i].z <= 1 || x0 < 0 || x0 >= HYPER_COLS || y0 < 0 || y0 >= HYPER_ROWS) {
+                local_rand = local_rand * 1103515245 + 12345;
+                streams[i].angle_x = ((local_rand / 65536) % 160) - 80;
+                
+                local_rand = local_rand * 1103515245 + 12345;
+                streams[i].angle_y = ((local_rand / 65536) % 60) - 30;
+                streams[i].z = 40; 
+            }
+        }
+
+        // Break on keyboard intercept
+        if (inb(0x64) & 0x01) {
+            inb(0x60);
+            running = 0;
+            break;
+        }
+
+        // Frame rate regulator
+        for (volatile int d = 0; d < 1800000; d++);
+        loops++;
+    }
+
+    // Drop back into standard prompt space cleanly
+    vga_set_color(NOTEBOOK_YELLOW);
+    vga_clear();
+}
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
     command_node_t* new_node = (command_node_t*)kmalloc(sizeof(command_node_t));
@@ -1760,6 +1880,7 @@ void shell_init() {
     shell_register_command("killscreen", "KillScreen", killscreen);
     shell_register_command("testposix", "Verify POSIX open/read/write/close functionality", cmd_test_posix);
     shell_register_command("cmatrix", "Matrix digital rain screen effect", cmd_cmatrix);
+    shell_register_command("hyperspace", "Jump to digital rain lightspeed", cmd_hyperspace);
 }
 
 void shell_dispatch(char* buffer) {
