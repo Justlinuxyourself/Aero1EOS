@@ -122,6 +122,8 @@ extern void vga_clear();
 extern int status_bar_enabled;
 #define CMATRIX_COLS 80
 #define CMATRIX_ROWS 24 // Leave row 24 safe for status bar!
+#define DVD_COLS 80
+#define DVD_ROWS 24 // Leave row 24 safe for the status bar clock
 /* --- String Helpers --- */
 int strcmp(const char* s1, const char* s2) {
     while (*s1 && (*s1 == *s2)) { s1++; s2++; }
@@ -1690,41 +1692,31 @@ void cmd_cmatrix(char* args) {
     vga_set_color(NOTEBOOK_YELLOW);
     vga_clear();
 }
-#define STREAM_COUNT 40
-#define HYPER_COLS 80
-#define HYPER_ROWS 24 // Leave row 24 safe for your clock!
-
-typedef struct {
-    int angle_x;  // Horizontal trajectory direction (-100 to 100)
-    int angle_y;  // Vertical trajectory direction (-100 to 100)
-    int z;        // Distance from center (Max depth 40 down to 1)
-    char glyph;   // The current leading character
-} hyper_stream_t;
-
-void cmd_hyperspace(char* args) {
+void cmd_dvd(char* args) {
     (void)args;
 
-    hyper_stream_t streams[STREAM_COUNT];
-    uint32_t local_rand = cmos_get_sec() + get_uptime_ms();
+    // Starting positions (centered)
+    int x = 33;
+    int y = 10;
+    
+    // Box dimensions expanded to perfectly fit Aero1EOS
+    int box_w = 14;
+    int box_h = 3;
 
-    // Clear screen to total pitch black space
+    // Movement vectors
+    int dx = 1;
+    int dy = 1;
+
+    // Color array to cycle through on bounces (excluding black)
+    unsigned char colors[] = {0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x02, 0x03, 0x05, 0x06};
+    int color_index = 0;
+    unsigned char current_color = colors[color_index];
+
+    // Clear screen
     vga_set_color(0x00);
     vga_clear();
 
-    // Initialize the warp vectors
-    for (int i = 0; i < STREAM_COUNT; i++) {
-        local_rand = local_rand * 1103515245 + 12345;
-        streams[i].angle_x = ((local_rand / 65536) % 160) - 80;
-        
-        local_rand = local_rand * 1103515245 + 12345;
-        streams[i].angle_y = ((local_rand / 65536) % 60) - 30;
-        
-        local_rand = local_rand * 1103515245 + 12345;
-        streams[i].z = ((local_rand / 65536) % 40) + 1;
-        streams[i].glyph = 33 + (local_rand % 93);
-    }
-
-    // Flush out the leftover enter scancodes
+    // Flush any leftover keyboard inputs
     while (inb(0x64) & 0x01) { inb(0x60); }
 
     volatile unsigned short* vga = (volatile unsigned short*)VGA_ADDRESS;
@@ -1732,81 +1724,96 @@ void cmd_hyperspace(char* args) {
     uint32_t loops = 0;
 
     while (running) {
-        if (loops % 15 == 0) {
+        if (loops % 20 == 0) {
             vga_draw_status_bar();
         }
 
-        for (int i = 0; i < STREAM_COUNT; i++) {
-            // 1. Calculate positions across different depths to simulate a tail fade
-            // Current Head
-            int x0 = 40 + (streams[i].angle_x * 10) / streams[i].z;
-            int y0 = 12 + (streams[i].angle_y * 10) / streams[i].z;
-
-            // Body (Slightly further back in depth)
-            int x1 = 40 + (streams[i].angle_x * 10) / (streams[i].z + 2);
-            int y1 = 12 + (streams[i].angle_y * 10) / (streams[i].z + 2);
-
-            // Tail (Farther back)
-            int x2 = 40 + (streams[i].angle_x * 10) / (streams[i].z + 5);
-            int y2 = 12 + (streams[i].angle_y * 10) / (streams[i].z + 5);
-
-            // Clear Tail Tip (Furthest back, wipes out previous frames)
-            int cx = 40 + (streams[i].angle_x * 10) / (streams[i].z + 8);
-            int cy = 12 + (streams[i].angle_y * 10) / (streams[i].z + 8);
-
-            // Wipe out the back edge of the tail
-            if (cx >= 0 && cx < HYPER_COLS && cy >= 0 && cy < HYPER_ROWS) {
-                vga[(cy * HYPER_COLS) + cx] = (unsigned short)' ' | (0x00 << 8);
-            }
-
-            // Draw the Dark Green Tail section
-            if (x2 >= 0 && x2 < HYPER_COLS && y2 >= 0 && y2 < HYPER_ROWS) {
-                vga[(y2 * HYPER_COLS) + x2] = (vga[(y2 * HYPER_COLS) + x2] & 0x00FF) | (0x02 << 8);
-            }
-
-            // Draw the Bright Green Body section
-            if (x1 >= 0 && x1 < HYPER_COLS && y1 >= 0 && y1 < HYPER_ROWS) {
-                vga[(y1 * HYPER_COLS) + x1] = (vga[(y1 * HYPER_COLS) + x1] & 0x00FF) | (0x0A << 8);
-            }
-
-            // Draw the leading Head character (Bright White: 0x0F)
-            if (x0 >= 0 && x0 < HYPER_COLS && y0 >= 0 && y0 < HYPER_ROWS) {
-                vga[(y0 * HYPER_COLS) + x0] = (unsigned short)streams[i].glyph | (0x0F << 8);
-            }
-
-            // Move closer
-            streams[i].z -= 1;
-
-            // Mutate characters slightly as they move for that matrix flicker vibe
-            if (loops % 4 == 0) {
-                local_rand = local_rand * 1103515245 + 12345;
-                streams[i].glyph = 33 + (local_rand % 93);
-            }
-
-            // Boundary reset: If it hits the screen edge or flies past you, reset to center background
-            if (streams[i].z <= 1 || x0 < 0 || x0 >= HYPER_COLS || y0 < 0 || y0 >= HYPER_ROWS) {
-                local_rand = local_rand * 1103515245 + 12345;
-                streams[i].angle_x = ((local_rand / 65536) % 160) - 80;
-                
-                local_rand = local_rand * 1103515245 + 12345;
-                streams[i].angle_y = ((local_rand / 65536) % 60) - 30;
-                streams[i].z = 40; 
+        // 1. ERASE the old box position
+        for (int row = 0; row < box_h; row++) {
+            for (int col = 0; col < box_w; col++) {
+                int tx = x + col;
+                int ty = y + row;
+                if (tx >= 0 && tx < DVD_COLS && ty >= 0 && ty < DVD_ROWS) {
+                    vga[(ty * DVD_COLS) + tx] = (unsigned short)' ' | (0x00 << 8);
+                }
             }
         }
 
-        // Break on keyboard intercept
+        // 2. MOVE the box position
+        x += dx;
+        y += dy;
+
+        // 3. COLLISION DETECTION & COLOR CHANGE
+        int bounced = 0;
+
+        if (x <= 0) {
+            x = 0;
+            dx = 1;
+            bounced = 1;
+        } else if (x + box_w >= DVD_COLS) {
+            x = DVD_COLS - box_w;
+            dx = -1;
+            bounced = 1;
+        }
+
+        if (y <= 0) {
+            y = 0;
+            dy = 1;
+            bounced = 1;
+        } else if (y + box_h >= DVD_ROWS) {
+            y = DVD_ROWS - box_h;
+            dy = -1;
+            bounced = 1;
+        }
+
+        if (bounced) {
+            color_index = (color_index + 1) % (sizeof(colors));
+            current_color = colors[color_index];
+        }
+
+        // 4. DRAW the Aero1EOS box position
+        for (int row = 0; row < box_h; row++) {
+            for (int col = 0; col < box_w; col++) {
+                int tx = x + col;
+                int ty = y + row;
+                
+                if (tx >= 0 && tx < DVD_COLS && ty >= 0 && ty < DVD_ROWS) {
+                    char display_char = ' ';
+                    
+                    // Borders
+                    if (row == 0 || row == box_h - 1) display_char = '-';
+                    if (col == 0 || col == box_w - 1) display_char = '|';
+                    if ((row == 0 || row == box_h - 1) && (col == 0 || col == box_w - 1)) display_char = '+';
+                    
+                    // Injecting "Aero1EOS" into the center row
+                    if (row == 1 && col == 3) { vga[(ty * DVD_COLS) + tx] = 'A' | (current_color << 8); col++; }
+                    else if (row == 1 && col == 4) { vga[(ty * DVD_COLS) + tx] = 'e' | (current_color << 8); col++; }
+                    else if (row == 1 && col == 5) { vga[(ty * DVD_COLS) + tx] = 'r' | (current_color << 8); col++; }
+                    else if (row == 1 && col == 6) { vga[(ty * DVD_COLS) + tx] = 'o' | (current_color << 8); col++; }
+                    else if (row == 1 && col == 7) { vga[(ty * DVD_COLS) + tx] = '1' | (current_color << 8); col++; }
+                    else if (row == 1 && col == 8) { vga[(ty * DVD_COLS) + tx] = 'E' | (current_color << 8); col++; }
+                    else if (row == 1 && col == 9) { vga[(ty * DVD_COLS) + tx] = 'O' | (current_color << 8); col++; }
+                    else if (row == 1 && col == 10) { vga[(ty * DVD_COLS) + tx] = 'S' | (current_color << 8); col++; }
+                    else {
+                        vga[(ty * DVD_COLS) + tx] = (unsigned short)display_char | (current_color << 8);
+                    }
+                }
+            }
+        }
+
+        // 5. BREAK LOOP ON KEYPRESS
         if (inb(0x64) & 0x01) {
-            inb(0x60);
+            inb(0x60); 
             running = 0;
             break;
         }
 
-        // Frame rate regulator
-        for (volatile int d = 0; d < 1800000; d++);
+        // Delay loop for Limbo
+        for (volatile int d = 0; d < 4000000; d++);
         loops++;
     }
 
-    // Drop back into standard prompt space cleanly
+    // Reset shell layout back to original theme state
     vga_set_color(NOTEBOOK_YELLOW);
     vga_clear();
 }
