@@ -1887,7 +1887,7 @@ void shell_init() {
     shell_register_command("killscreen", "KillScreen", killscreen);
     shell_register_command("testposix", "Verify POSIX open/read/write/close functionality", cmd_test_posix);
     shell_register_command("cmatrix", "Matrix digital rain screen effect", cmd_cmatrix);
-    shell_register_command("hyperspace", "Jump to digital rain lightspeed", cmd_hyperspace);
+    shell_register_command("ss", "Bouncing Aero1EOS logo screensaver", cmd_dvd);
 }
 
 void shell_dispatch(char* buffer) {
