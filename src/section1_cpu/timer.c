@@ -13,6 +13,7 @@ void timer_init() {
     outb(0x43, 0x36);
     outb(0x40, (unsigned char)(divisor & 0xFF));        // LSB
     outb(0x40, (unsigned char)((divisor >> 8) & 0xFF)); // MSB
+    outb(0x21, 0xFE);
 }
 void timer_handler() {
     timer_ticks++;
