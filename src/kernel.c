@@ -193,34 +193,40 @@ void todo_init() {
 
 
 void log_verbose(const char* subsystem, const char* msg) {
-    char time_buf[12];
-    // Convert ms to string (timer_ticks * 5 gives ms)
-    itoa(get_uptime_ms(), time_buf);
-
-    vga_set_attribute(0x17); // Grey
-    vga_write("[");
-    vga_write(time_buf);
-    vga_write("ms] [");
+    int h = cmos_get_hour();
+    int m = cmos_get_min();
+    int s = cmos_get_sec();
     
-    vga_set_attribute(0x1B); // Cyan
+    // Determine AM/PM
+    const char* period = (h >= 12) ? "PM" : "AM";
+    
+    // Convert 24h to 12h format
+    if (h == 0) h = 12;
+    else if (h > 12) h -= 12;
+
+    vga_write("[");
+    if (h < 10) vga_putchar('0');
+    print_dec(h); vga_putchar(':');
+    
+    if (m < 10) vga_putchar('0');
+    print_dec(m); vga_putchar(':');
+    
+    if (s < 10) vga_putchar('0');
+    print_dec(s);
+    
+    vga_write(" ");
+    vga_write(period);
+    vga_write("] [");
+    
     vga_write(subsystem);
-    vga_set_attribute(0x17); // Default
     vga_write("] ");
     vga_write(msg);
     vga_write("\n");
 }
 
-
-
 void kernel_main() {
     vga_clear();
     
-    log_verbose("IDT", "Registering interrupt gates...");
-    init_idt();
-    
-    log_verbose("TIMER", "Calibrating PIT...");
-    timer_init();
-    __asm__ volatile("sti"); 
     // 1. Initial Identity
     log_verbose("BOOT", "AliOS 4.0 Kernel Initializing...");
 
@@ -242,7 +248,13 @@ void kernel_main() {
 
     log_verbose("TTY", "Mapping virtual terminals...");
     vga_init_ttys();
-
+    
+    log_verbose("IDT", "Registering interrupt gates...");
+    init_idt();
+    
+    log_verbose("TIMER", "Calibrating PIT...");
+    timer_init();
+    
     // 5. Final Stage
     log_verbose("SYS", "Initialization sequence complete.");
     
