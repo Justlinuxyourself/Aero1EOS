@@ -5,6 +5,7 @@ All rights reserved.
 #include "section1_cpu/io.h"
 #include "section1_cpu/heap.h"
 #include "section4_shell/shell.h"
+#include "section6_pci/pci.h"
 typedef unsigned char  uint8_t;
 typedef unsigned short uint16_t;
 typedef unsigned int   uint32_t;  // In 32-bit/64-bit GCC, 'int' is 32 bits
@@ -21,7 +22,7 @@ typedef struct {
 	int active;
 } todo_t;
 extern todo_t my_list[10];
-
+extern unsigned long long timer_ticks;
 extern char kbd_get_char(unsigned char scancode);
 extern void timer_init();
 extern void timer_wait_tick();
@@ -189,19 +190,22 @@ void todo_init() {
     }
 }
 
-void log_ok(const char* msg) {
-    extern unsigned char current_vga_color; // Access the global color tracker
 
-    current_vga_color = 0x1F; // Bright White on Blue (Characters only)
-    vga_write("[  ");
+
+void log_verbose(const char* subsystem, const char* msg) {
+    char time_buf[12];
+    // Convert ms to string (timer_ticks * 5 gives ms)
+    itoa(get_uptime_ms(), time_buf);
+
+    vga_set_attribute(0x17); // Grey
+    vga_write("[");
+    vga_write(time_buf);
+    vga_write("ms] [");
     
-    current_vga_color = 0x1A; // Light Green on Blue
-    vga_write("OK");
-    
-    current_vga_color = 0x1F; // Bright White on Blue
-    vga_write("  ] ");
-    
-    current_vga_color = 0x1E; // Yellow on Blue for the text message
+    vga_set_attribute(0x1B); // Cyan
+    vga_write(subsystem);
+    vga_set_attribute(0x17); // Default
+    vga_write("] ");
     vga_write(msg);
     vga_write("\n");
 }
@@ -210,16 +214,38 @@ void log_ok(const char* msg) {
 
 void kernel_main() {
     vga_clear();
-    log_ok("INIT SHELL...");
+    
+    // 1. Initial Identity
+    log_verbose("BOOT", "AliOS 4.0 Kernel Initializing...");
+
+    // 2. CPU Identification
+    char cpu_name[49];
+    get_cpu_name(cpu_name);
+    log_verbose("CPU", cpu_name);
+
+    // 3. Hardware Bus Probe
+    log_verbose("PCI", "Probing configuration space...");
+    pci_scan(); 
+
+    // 4. Subsystem Initialization
+    log_verbose("SHELL", "Loading command environment...");
     shell_init(); 
-    log_ok("INIT TODO, KILLING GARB DATA...");
+
+    log_verbose("TODO", "Cleaning garbage data...");
     todo_init();
-    log_ok("INIT TIMER...");
+
+    log_verbose("TIMER", "Calibrating PIT...");
     timer_init();
-    log_ok("INIT TTYS...");
+
+    log_verbose("TTY", "Mapping virtual terminals...");
     vga_init_ttys();
-    log_ok("INIT IDT...");
+
+    log_verbose("IDT", "Registering interrupt gates...");
     init_idt();
+
+    // 5. Final Stage
+    log_verbose("SYS", "Initialization sequence complete.");
+    
     sleep_ms(1000);
     vga_clear();
     bootup_screen();
