@@ -1827,6 +1827,20 @@ void cmd_dvd(char* args) {
     vga_set_color(NOTEBOOK_YELLOW);
     vga_clear();
 }
+void cmd_socials(char* args) {
+    (void)args; // Unused for this command
+
+    vga_write("\n=================== Aero1EOS Developer Socials ===================\n");
+    vga_write("  GitHub:    justlinuxyourself\n");
+    vga_write("  Discord:   alithealiosowner\n");
+    vga_write("  TikTok:    hisswx9\n");
+    vga_write("  Insta:     alithefukinglinuxlover\n");
+    vga_write("  Snapchat:  a56225047\n");
+    vga_write("  Roblox:    justlinuxyourself\n");
+    vga_write("  Chess.com: alitheosdev\n");
+    vga_write("  Email:     alithefukinglinuxlover@gmail.com\n");
+    vga_write("===============================================================\n\n");
+}
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
     command_node_t* new_node = (command_node_t*)kmalloc(sizeof(command_node_t));
@@ -1898,6 +1912,7 @@ void shell_init() {
     shell_register_command("testposix", "Verify POSIX open/read/write/close functionality", cmd_test_posix);
     shell_register_command("cmatrix", "Matrix digital rain screen effect", cmd_cmatrix);
     shell_register_command("ss", "Bouncing Aero1EOS logo screensaver", cmd_dvd);
+    shell_register_command("socials", "Display Aero1EOS creator contact", cmd_socials);
 }
 
 void shell_dispatch(char* buffer) {
