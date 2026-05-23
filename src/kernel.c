@@ -215,6 +215,9 @@ void log_verbose(const char* subsystem, const char* msg) {
 void kernel_main() {
     vga_clear();
     
+    log_verbose("IDT", "Registering interrupt gates...");
+    init_idt();
+    
     log_verbose("TIMER", "Calibrating PIT...");
     timer_init();
     // 1. Initial Identity
@@ -238,9 +241,6 @@ void kernel_main() {
 
     log_verbose("TTY", "Mapping virtual terminals...");
     vga_init_ttys();
-
-    log_verbose("IDT", "Registering interrupt gates...");
-    init_idt();
 
     // 5. Final Stage
     log_verbose("SYS", "Initialization sequence complete.");
