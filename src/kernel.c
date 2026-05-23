@@ -215,6 +215,8 @@ void log_verbose(const char* subsystem, const char* msg) {
 void kernel_main() {
     vga_clear();
     
+    log_verbose("TIMER", "Calibrating PIT...");
+    timer_init();
     // 1. Initial Identity
     log_verbose("BOOT", "AliOS 4.0 Kernel Initializing...");
 
@@ -233,9 +235,6 @@ void kernel_main() {
 
     log_verbose("TODO", "Cleaning garbage data...");
     todo_init();
-
-    log_verbose("TIMER", "Calibrating PIT...");
-    timer_init();
 
     log_verbose("TTY", "Mapping virtual terminals...");
     vga_init_ttys();
