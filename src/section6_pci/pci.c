@@ -5,10 +5,9 @@
 #define PCI_CONFIG_DATA 0xCFC
 
 // Helper to write to PCI Address Port (32-bit)
-// Note: We use two 16-bit writes because io.h has outw
 void pci_write_addr(uint32_t addr) {
-    outw(PCI_CONFIG_ADDR, (uint16_t)(addr & 0xFFFF));
-    outw(PCI_CONFIG_ADDR + 2, (uint16_t)((addr >> 16) & 0xFFFF));
+    // Write the full 32-bit address at once to the PCI Config Address port
+    outl(PCI_CONFIG_ADDR, addr);
 }
 
 uint16_t pci_read_word(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset) {
