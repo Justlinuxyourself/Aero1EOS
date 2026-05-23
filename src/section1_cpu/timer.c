@@ -14,7 +14,9 @@ void timer_init() {
     outb(0x40, (unsigned char)(divisor & 0xFF));        // LSB
     outb(0x40, (unsigned char)((divisor >> 8) & 0xFF)); // MSB
 }
-
+void timer_handler() {
+    timer_ticks++;
+}
 void timer_wait_tick() {
     static unsigned short last_val = 0xFFFF;
     unsigned short current_val;
