@@ -2,7 +2,7 @@
 
 global exception_table
 extern c_kernel_panic
-
+extern timer_handler
 section .text
 
 ; --- The Magic Assembly Macro ---
