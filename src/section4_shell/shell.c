@@ -1841,6 +1841,42 @@ void cmd_socials(char* args) {
     vga_write("  Email:     alithefukinglinuxlover@gmail.com\n");
     vga_write("===============================================================\n\n");
 }
+void play_lullaby_sync() {
+    // A longer, repeating lullaby melody
+    // Frequencies: G4=392, A4=440, B4=494, C5=523, D5=587, E5=659
+    
+    // Repeat the sequence a few times to make it long
+    for (int loop = 0; loop < 3; loop++) {
+        // Part 1: Gentle start
+        play_sound(392); sleep_ms(500);
+        play_sound(392); sleep_ms(500);
+        play_sound(440); sleep_ms(500);
+        play_sound(392); sleep_ms(500);
+        
+        // Part 2: The climb
+        play_sound(523); sleep_ms(600);
+        play_sound(494); sleep_ms(700);
+        
+        // Short pause (stutter point)
+        nosound(); sleep_ms(200);
+        
+        // Part 3: The descent
+        play_sound(392); sleep_ms(500);
+        play_sound(392); sleep_ms(500);
+        play_sound(440); sleep_ms(500);
+        play_sound(392); sleep_ms(500);
+        
+        // Part 4: Ending phrase
+        play_sound(587); sleep_ms(600);
+        play_sound(523); sleep_ms(800);
+        
+        // Long pause before repeating
+        nosound(); sleep_ms(1000);
+    }
+    
+    // Final stop
+    nosound();
+}
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
     command_node_t* new_node = (command_node_t*)kmalloc(sizeof(command_node_t));
@@ -1913,6 +1949,7 @@ void shell_init() {
     shell_register_command("cmatrix", "Matrix digital rain screen effect", cmd_cmatrix);
     shell_register_command("ss", "Bouncing Aero1EOS logo screensaver", cmd_dvd);
     shell_register_command("socials", "Display Aero1EOS creator contact", cmd_socials);
+    shell_register_command("lullaby", "Lullaby (made it for my baby sis)", play_lullaby_sync);
 }
 
 void shell_dispatch(char* buffer) {
