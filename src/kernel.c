@@ -220,6 +220,7 @@ void kernel_main() {
     
     log_verbose("TIMER", "Calibrating PIT...");
     timer_init();
+    __asm__ volatile("sti"); 
     // 1. Initial Identity
     log_verbose("BOOT", "AliOS 4.0 Kernel Initializing...");
 
