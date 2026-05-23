@@ -190,7 +190,22 @@ void todo_init() {
     }
 }
 
+void print_dec(unsigned int val) {
+    if (val == 0) {
+        vga_putchar('0');
+        return;
+    }
 
+    char buf[12];
+    int i = 0;
+    while (val > 0) {
+        buf[i++] = (val % 10) + '0';
+        val /= 10;
+    }
+    while (--i >= 0) {
+        vga_putchar(buf[i]);
+    }
+}
 
 void log_verbose(const char* subsystem, const char* msg) {
     int h = cmos_get_hour();
