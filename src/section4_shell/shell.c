@@ -1871,7 +1871,7 @@ void play_lullaby_sync() {
         play_sound(523); sleep_ms(800);
         
         // Long pause before repeating
-        nosound(); sleep_ms(1000);
+        nosound(); sleep_ms(100);
     }
     
     // Final stop
