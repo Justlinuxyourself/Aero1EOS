@@ -81,8 +81,8 @@ static void print_hex64(uint64_t value) {
 }
 
 void init_idt() {
-    // Set limit and base for the 32 system exception entry registers + ONE FOR TIMER
-    idt_ptr.limit = (sizeof(IdtEntry) * 33) - 1;
+    // Set limit and base for the 32 system exception entry registers
+    idt_ptr.limit = (sizeof(IdtEntry) * 32) - 1;
     idt_ptr.base = (uint64_t)&idt;
 
     for (int i = 0; i < 32; i++) {
@@ -95,14 +95,7 @@ void init_idt() {
         idt[i].offset_high      = (uint32_t)((addr >> 32) & 0xFFFFFFFF);
         idt[i].reserved         = 0;
     }
-    // 2. Setup Index 32 (Timer)
-    uint64_t timer_addr = exception_table[32]; // Grabs the timer_isr_stub address
-    idt[32].offset_low       = (uint16_t)(timer_addr & 0xFFFF);
-    idt[32].selector         = 0x18;
-    idt[32].type_attributes  = 0x8E; // Interrupt Gate
-    idt[32].offset_mid       = (uint16_t)((timer_addr >> 16) & 0xFFFF);
-    idt[32].offset_high      = (uint32_t)((timer_addr >> 32) & 0xFFFFFFFF);
-    idt[32].reserved         = 0;
+    
     // Call native assembly instruction to bind this framework table to CPU
     __asm__ volatile("lidt %0" : : "m"(idt_ptr));
 }
