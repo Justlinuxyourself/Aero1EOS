@@ -2,7 +2,6 @@
 
 global exception_table
 extern c_kernel_panic
-extern timer_handler
 section .text
 
 ; --- The Magic Assembly Macro ---
@@ -93,20 +92,6 @@ exception_common_route:
     hlt
     jmp .dead_halt
 
-global timer_isr_stub
-timer_isr_stub:
-    push rax            ; Save RAX
-    push rbx            ; Save RBX
-    
-    call timer_handler  ; Call C function
-    
-    mov al, 0x20        ; End of Interrupt (EOI)
-    out 0x20, al
-    
-    pop rbx
-    pop rax
-    iretq               ; Mandatory return
-
 section .rodata
 align 8
 exception_table:
@@ -115,4 +100,3 @@ exception_table:
     dq exception_stub_%[i]
 %assign i i+1
 %endrep
-    dq timer_isr_stub   
