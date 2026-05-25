@@ -3,6 +3,10 @@
 <h1 align="center">💻 Aero1EOS 4.0 - Notebook Edition</h1>
 
 <p align="center">
+  Total Development Commits: <!--COMMIT_COUNT-->738<!--/COMMIT_COUNT-->
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/Built%20With-C-A8B9CC?style=flat-square&logo=c&logoColor=white" alt="C">
   <img src="https://img.shields.io/badge/Built%20With-Assembly-62A106?style=flat-square&logo=assemblyscript&logoColor=white" alt="ASM">
 </p>
