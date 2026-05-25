@@ -289,7 +289,7 @@ void cmd_neofetch(char* args) {
     
     // NO MORE HARDCODING: Show the real address
     vga_write("\\____ /        HEAP: 0x"); vga_write(heap_addr_buf); vga_write("\n");
-    vga_write("               KERNEL SIZE:"); vga_write(_kernel_end - _kernel_start);
+    vga_write("               KERNEL SIZE:"); vga_write(_kernel_end - _kernel_start); vga_write("\n");
     vga_write("               MODE: 64-bit Long Mode\n");
 }
 
