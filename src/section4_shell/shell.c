@@ -124,6 +124,11 @@ extern int status_bar_enabled;
 #define CMATRIX_ROWS 24 // Leave row 24 safe for status bar!
 #define DVD_COLS 80
 #define DVD_ROWS 24 // Leave row 24 safe for the status bar clock
+#define MAX_HISTORY 10
+char history[MAX_HISTORY][80];
+int history_idx = 0;
+int history_count = 0;
+
 /* --- String Helpers --- */
 int strcmp(const char* s1, const char* s2) {
     while (*s1 && (*s1 == *s2)) { s1++; s2++; }
@@ -253,7 +258,7 @@ void cmd_help(char* args) {
         curr = curr->next;
         
         if (curr) {
-            vga_write(" ||| ");
+            vga_write(" | ");
         }
     }
     vga_write("\n"); // Final newline to keep the shell prompt clean
@@ -1878,6 +1883,29 @@ void play_lullaby_sync() {
     // Final stop
     nosound();
 }
+void add_to_history(char* cmd) {
+    // Copy command into the current slot
+    for(int i = 0; i < 80; i++) {
+        history[history_idx][i] = cmd[i];
+        if(cmd[i] == '\0') break;
+    }
+    
+    history_idx = (history_idx + 1) % MAX_HISTORY;
+    if (history_count < MAX_HISTORY) history_count++;
+}
+void cmd_history() {
+    vga_write("--- Command History ---\n");
+    for (int i = 0; i < history_count; i++) {
+        vga_write("[");
+        vga_write(cmos_get_hour() % 12); vga_write(":");
+        vga_write(cmos_get_min()); vga_write(":");
+        vga_write(cmos_get_sec()); 
+        vga_write(cmos_get_hour() >= 12 ? " PM] " : " AM] ");
+        
+        vga_write(history[i]);
+        vga_write("\n");
+    }
+}
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
     command_node_t* new_node = (command_node_t*)kmalloc(sizeof(command_node_t));
@@ -1951,9 +1979,11 @@ void shell_init() {
     shell_register_command("ss", "Bouncing Aero1EOS logo screensaver", cmd_dvd);
     shell_register_command("socials", "Display Aero1EOS creator contact", cmd_socials);
     shell_register_command("lullaby", "Lullaby (made it for my baby sis)", play_lullaby_sync);
+    shell_register_command("history", "HISTORY", cmd_history);
 }
 
 void shell_dispatch(char* buffer) {
+    add_to_history(buffer);
     // If the user just hits enter, just print a new prompt on a new line
     if (strlen(buffer) == 0) {
         vga_write("\nAero1EOS:");
