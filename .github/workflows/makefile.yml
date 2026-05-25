@@ -85,7 +85,24 @@ jobs:
               fi
             done
           fi
-
+      - name: Update README with Commit Count
+        if: always()
+        run: |
+          CURRENT_COUNT=$(git rev-list --count HEAD)
+          TOTAL_COUNT=$((CURRENT_COUNT + 467))
+          
+          # Only update if the number inside the tags matches the new total
+          if grep -q "<!--COMMIT_COUNT-->$TOTAL_COUNT<!--/COMMIT_COUNT-->" README.md; then
+            echo "Count is already up to date. Skipping."
+          else
+            # Only replaces the number specifically between the tags
+            sed -i "s/<!--COMMIT_COUNT-->[0-9]*<!--\/COMMIT_COUNT-->/<!--COMMIT_COUNT-->$TOTAL_COUNT<!--\/COMMIT_COUNT-->/" README.md
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add README.md
+            git commit -m "docs: auto-update commit count to $TOTAL_COUNT [skip ci]"
+            git push
+          fi
       - name: Post Discord Report
         # CRITICAL: This makes the step run even if building or releasing crashed!
         if: always()
