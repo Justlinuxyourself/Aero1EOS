@@ -45,6 +45,8 @@ extern void vga_set_color(unsigned char color);
 extern void vga_set_attribute(unsigned char attribute);
 extern void sleep();
 extern void init_idt(void);
+extern uint8_t _kernel_start;
+extern uint8_t _kernel_end;
 int strcmp_custom(char* s1, char* s2) {
     int i = 0;
     while (s1[i] != '\0' || s2[i] != '\0') {
@@ -270,6 +272,9 @@ void kernel_main() {
     log_verbose("TIMER", "Calibrating PIT...");
     timer_init();
     
+    log_verbose("KRNL", "Kernel size is...");
+    vga_write(_kernel_end - _kernel_start);
+    vga_write("\n");
     // 5. Final Stage
     log_verbose("SYS", "Initialization sequence complete.");
     
