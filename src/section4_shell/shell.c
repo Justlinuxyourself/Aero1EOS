@@ -1893,23 +1893,22 @@ void add_to_history(char* cmd) {
     history_idx = (history_idx + 1) % MAX_HISTORY;
     if (history_count < MAX_HISTORY) history_count++;
 }
-void cmd_history() {
-    vga_write("--- Command History ---\n");
-    char buf[16]; // Buffer for conversion
+void cmd_history(char* args) {
+    vga_write("\n--- Command History ---\n");
     
+    // We loop through the total number of commands stored
     for (int i = 0; i < history_count; i++) {
-        vga_write("[");
+        // Print the sequence number (i + 1)
+        char s_buf[8];
+        vga_write("#");
+        vga_write(itoa(i + 1, s_buf));
+        vga_write(": ");
         
-        // Convert integers to strings
-        itoa(cmos_get_hour() % 12, buf); vga_write(buf); vga_write(":");
-        itoa(cmos_get_min(), buf);        vga_write(buf); vga_write(":");
-        itoa(cmos_get_sec(), buf);        vga_write(buf);
-        
-        vga_write(cmos_get_hour() >= 12 ? " PM] " : " AM] ");
-        
+        // Print the command stored at index i
         vga_write(history[i]);
         vga_write("\n");
     }
+    vga_write("> ");
 }
 void cmd_birthday(char* args) {
     // 1. Define birthday (Feb 13, 2026 = 31+13 = 44th day)
@@ -2016,7 +2015,23 @@ void shell_init() {
 }
 
 void shell_dispatch(char* buffer) {
-    add_to_history(buffer);
+    // 1. Copy command into the current history index
+        for (int i = 0; i < 79; i++) {
+        history[history_idx][i] = cmd[i];
+        if (cmd[i] == '\0') break;
+    }
+    history[history_idx][79] = '\0'; // Safety null-terminate
+
+    // 2. Move index and update count
+    history_idx++;
+    if (history_idx >= MAX_HISTORY) {
+        history_idx = 0; // Ring buffer wrap-around
+    }
+    
+    // Increment history_count only until we fill the buffer
+    if (history_count < MAX_HISTORY) {
+        history_count++;
+    }
     // If the user just hits enter, just print a new prompt on a new line
     if (strlen(buffer) == 0) {
         vga_write("\nAero1EOS:");
