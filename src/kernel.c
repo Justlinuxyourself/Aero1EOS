@@ -273,8 +273,9 @@ void kernel_main() {
     timer_init();
     
     log_verbose("KRNL", "Kernel size is...");
-    vga_write(_kernel_end - _kernel_start);
-    vga_write("\n");
+    char size_buf[12];
+    vga_write(itoa((int)(_kernel_end - _kernel_start), size_buf));
+    vga_write(" bytes\n");
     // 5. Final Stage
     log_verbose("SYS", "Initialization sequence complete.");
     
