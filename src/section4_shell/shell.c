@@ -1895,16 +1895,48 @@ void add_to_history(char* cmd) {
 }
 void cmd_history() {
     vga_write("--- Command History ---\n");
+    char buf[16]; // Buffer for conversion
+    
     for (int i = 0; i < history_count; i++) {
         vga_write("[");
-        vga_write(cmos_get_hour() % 12); vga_write(":");
-        vga_write(cmos_get_min()); vga_write(":");
-        vga_write(cmos_get_sec()); 
+        
+        // Convert integers to strings
+        itoa(cmos_get_hour() % 12, buf); vga_write(buf); vga_write(":");
+        itoa(cmos_get_min(), buf);        vga_write(buf); vga_write(":");
+        itoa(cmos_get_sec(), buf);        vga_write(buf);
+        
         vga_write(cmos_get_hour() >= 12 ? " PM] " : " AM] ");
         
         vga_write(history[i]);
         vga_write("\n");
     }
+}
+void cmd_birthday(char* args) {
+    // 1. Define birthday (Feb 13, 2026 = 31+13 = 44th day)
+    int birth_day_of_year = 44;
+    
+    // 2. Fetch current date from CMOS
+    int curr_month = cmos_get_month();
+    int curr_day = cmos_get_day();
+    
+    // 3. Days in each month (non-leap year)
+    int days_in_months[] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    int curr_day_of_year = 0;
+    for (int i = 1; i < curr_month; i++) {
+        curr_day_of_year += days_in_months[i];
+    }
+    curr_day_of_year += curr_day;
+    
+    int age_days = curr_day_of_year - birth_day_of_year;
+    
+    // 4. Output results
+    vga_write("\n--- Aero1EOS Birthday Info ---\n");
+    vga_write("Birthday: February 13, 2026\n");
+    vga_write("Age: "); 
+    char buf[8];
+    vga_write(itoa(age_days, buf));
+    vga_write(" days old.\n");
+    vga_write("------------------------------\n");
 }
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
@@ -1980,6 +2012,7 @@ void shell_init() {
     shell_register_command("socials", "Display Aero1EOS creator contact", cmd_socials);
     shell_register_command("lullaby", "Lullaby (made it for my baby sis)", play_lullaby_sync);
     shell_register_command("history", "HISTORY", cmd_history);
+    shell_register_command("birthday", "Show OS age and birthday", cmd_birthday);
 }
 
 void shell_dispatch(char* buffer) {
