@@ -2017,8 +2017,8 @@ void shell_init() {
 void shell_dispatch(char* buffer) {
     // 1. Copy command into the current history index
         for (int i = 0; i < 79; i++) {
-        history[history_idx][i] = cmd[i];
-        if (cmd[i] == '\0') break;
+        history[history_idx][i] = buffer[i];
+        if (buffer[i] == '\0') break;
     }
     history[history_idx][79] = '\0'; // Safety null-terminate
 
