@@ -285,6 +285,7 @@ void cmd_neofetch(char* args) {
     
     // Get the actual hex address of the heap
     char heap_addr_buf[16];
+    char size_buf[12];
     itohex((unsigned long)&_kernel_end, heap_addr_buf);
     
     vga_write("   ______      Aero1EOS 4.0\n");
