@@ -37,7 +37,7 @@ void vga_write_hex(uint16_t val) {
 }
 
 void pci_scan() {
-    vga_write("[PCI] Scanning bus...\n");
+    vga_write("\n[PCI] Scanning bus...\n");
     for (uint16_t bus = 0; bus < 256; bus++) {
         for (uint8_t slot = 0; slot < 32; slot++) {
             uint16_t vendor = pci_get_vendor_id((uint8_t)bus, slot);
