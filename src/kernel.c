@@ -47,7 +47,7 @@ extern void sleep();
 extern void init_idt(void);
 extern uint8_t _kernel_start;
 extern uint8_t _kernel_end;
-extern bool ata_probe(uint16_t port);
+bool ata_probe(uint16_t port);
 int strcmp_custom(char* s1, char* s2) {
     int i = 0;
     while (s1[i] != '\0' || s2[i] != '\0') {
