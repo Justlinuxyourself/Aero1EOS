@@ -6,6 +6,7 @@ All rights reserved.
 #include "section1_cpu/heap.h"
 #include "section4_shell/shell.h"
 #include "section6_pci/pci.h"
+#include <stdbool.h>
 typedef unsigned char  uint8_t;
 typedef unsigned short uint16_t;
 typedef unsigned int   uint32_t;  // In 32-bit/64-bit GCC, 'int' is 32 bits
