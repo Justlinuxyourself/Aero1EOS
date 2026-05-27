@@ -47,6 +47,7 @@ extern void sleep();
 extern void init_idt(void);
 extern uint8_t _kernel_start;
 extern uint8_t _kernel_end;
+extern bool ata_probe(uint16_t port);
 int strcmp_custom(char* s1, char* s2) {
     int i = 0;
     while (s1[i] != '\0' || s2[i] != '\0') {
@@ -272,6 +273,16 @@ void kernel_main() {
     log_verbose("TIMER", "Calibrating PIT...");
     timer_init();
     
+    log_verbose("ATA", "Probing ATA...");
+    
+    if (ata_probe(0x1F0)) {
+    vga_write("DISK FOUND ON PRIM! (0x1F0)");
+    } else if (ata_probe(0x170)) {
+    vga_write("DISK FOUND ON SEC! (0x170)");
+    } else {
+    vga_write("ERROR! NO DISK FOUND!\n");
+    }
+
     log_verbose("KRNL", "Kernel size is...");
     char size_buf[12];
     vga_write(itoa((int)(_kernel_end - _kernel_start), size_buf));
