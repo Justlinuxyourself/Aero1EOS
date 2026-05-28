@@ -128,7 +128,7 @@ extern int status_bar_enabled;
 char history[MAX_HISTORY][80];
 int history_idx = 0;
 int history_count = 0;
-
+#define MAX_SNAKE_LEN 100
 /* --- String Helpers --- */
 int strcmp(const char* s1, const char* s2) {
     while (*s1 && (*s1 == *s2)) { s1++; s2++; }
@@ -1940,6 +1940,62 @@ void cmd_birthday(char* args) {
     vga_write(" days old.\n");
     vga_write("------------------------------\n");
 }
+
+void cmd_snake(char* args) {
+    unsigned short* vga = (unsigned short*)VGA_ADDRESS;
+    int body_x[MAX_SNAKE_LEN], body_y[MAX_SNAKE_LEN];
+    int length = 3, head = 0;
+    int x = 40, y = 12, dx = 1, dy = 0;
+    int ax = 10, ay = 10; // Apple position
+    int running = 1;
+
+    // Initialize body
+    for(int i=0; i<length; i++) { body_x[i] = x-i; body_y[i] = y; }
+
+    vga_clear();
+    while (running) {
+        // 1. Input
+        if (inb(0x64) & 1) {
+            unsigned char key = inb(0x60);
+            if (key == 0x01) running = 0; 
+            else if (key == 0x11) { dx = 0; dy = -1; }
+            else if (key == 0x1E) { dx = -1; dy = 0; }
+            else if (key == 0x1F) { dx = 0; dy = 1; }
+            else if (key == 0x20) { dx = 1; dy = 0; }
+        }
+
+        // 2. Move
+        int nx = body_x[head] + dx;
+        int ny = body_y[head] + dy;
+
+        // Collision check
+        if (nx <= 0 || nx >= 79 || ny <= 0 || ny >= 23) running = 0;
+
+        // Update head
+        head = (head + 1) % MAX_SNAKE_LEN;
+        body_x[head] = nx;
+        body_y[head] = ny;
+
+        // Eat Apple
+        if (nx == ax && ny == ay) {
+            length++;
+            ax = (cmos_get_sec() % 78) + 1;
+            ay = (get_uptime_seconds() % 22) + 1;
+        } else {
+            // Erase tail
+            int tail = (head - length + 1 + MAX_SNAKE_LEN) % MAX_SNAKE_LEN;
+            vga[(body_y[tail] * 80) + body_x[tail]] = 0x0F20;
+        }
+
+        // Draw Apple and Head
+        vga[(ay * 80) + ax] = 0x0C40; // Red @
+        vga[(ny * 80) + nx] = 0x2F4F; // Green O
+
+        sleep_ms(150);
+    }
+    vga_clear();
+}
+
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
     command_node_t* new_node = (command_node_t*)kmalloc(sizeof(command_node_t));
@@ -2015,6 +2071,8 @@ void shell_init() {
     shell_register_command("lullaby", "Lullaby (made it for my baby sis)", play_lullaby_sync);
     shell_register_command("history", "HISTORY", cmd_history);
     shell_register_command("birthday", "Show OS age and birthday", cmd_birthday);
+    shell_register_command("snake", "Play Snake game", cmd_snake);
+
 }
 
 void shell_dispatch(char* buffer) {
