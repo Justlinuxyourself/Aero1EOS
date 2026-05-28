@@ -1969,7 +1969,7 @@ void cmd_snake(char* args) {
 
     vga_clear();
     // Draw initial state
-    vga[(ay * 80) + ax] = 0x0C40; // Apple
+    vga[(ay * 80) + ax] = 0x1C40; // Apple
 
     while (running) {
         // 1. Input Logic (Filter out key releases)
@@ -2000,21 +2000,21 @@ void cmd_snake(char* args) {
                 if (length < MAX_SNAKE_LEN - 1) length++;
                 ax = (cmos_get_sec() % 77) + 1;
                 ay = (get_uptime_ms() % 21) + 1;
-                vga[(ay * 80) + ax] = 0x0C40; // New Apple
+                vga[(ay * 80) + ax] = 0x1C40; // New Apple
             } else {
                 // 6. Erase tail
                 int tail = (head - length + 1 + MAX_SNAKE_LEN) % MAX_SNAKE_LEN;
-                vga[(body_y[tail] * 80) + body_x[tail]] = 0x0F20; // 0x0F20 is space
+                vga[(body_y[tail] * 80) + body_x[tail]] = 0x1F20; // 0x0F20 is space
             }
 
             // 7. Draw Head
-            vga[(ny * 80) + nx] = 0x2F4F; 
+            vga[(ny * 80) + nx] = 0x1F4F; 
         }
 
         sleep_ms(150);
     }
     vga_clear();
-    vga_write("Game Over! Returned to shell.\n> ");
+    vga_write("Game Over! Returned to shell.\n");
 }
 
 /* --- Shell Logic --- */
