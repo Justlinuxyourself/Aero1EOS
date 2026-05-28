@@ -1941,59 +1941,80 @@ void cmd_birthday(char* args) {
     vga_write("------------------------------\n");
 }
 
+unsigned char check_key() {
+    // Only return if the buffer has data (bit 0 is set)
+    if (inb(0x64) & 0x01) {
+        return inb(0x60);
+    }
+    return 0; // Nothing pressed
+}
+
+
+#define MAX_SNAKE_LEN 100
+
 void cmd_snake(char* args) {
     unsigned short* vga = (unsigned short*)VGA_ADDRESS;
     int body_x[MAX_SNAKE_LEN], body_y[MAX_SNAKE_LEN];
     int length = 3, head = 0;
     int x = 40, y = 12, dx = 1, dy = 0;
-    int ax = 10, ay = 10; // Apple position
+    int ax = 10, ay = 10;
     int running = 1;
 
-    // Initialize body
-    for(int i=0; i<length; i++) { body_x[i] = x-i; body_y[i] = y; }
+    // Initialize body (starting at 40,12)
+    for(int i = 0; i < MAX_SNAKE_LEN; i++) { body_x[i] = 0; body_y[i] = 0; }
+    for(int i = 0; i < length; i++) { 
+        body_x[i] = x - i; 
+        body_y[i] = y; 
+    }
 
     vga_clear();
+    // Draw initial state
+    vga[(ay * 80) + ax] = 0x0C40; // Apple
+
     while (running) {
-        // 1. Input
-        if (inb(0x64) & 1) {
-            unsigned char key = inb(0x60);
-            if (key == 0x01) running = 0; 
-            else if (key == 0x11) { dx = 0; dy = -1; }
-            else if (key == 0x1E) { dx = -1; dy = 0; }
-            else if (key == 0x1F) { dx = 0; dy = 1; }
-            else if (key == 0x20) { dx = 1; dy = 0; }
+        // 1. Input Logic (Filter out key releases)
+        unsigned char key = check_key();
+        if (key > 0 && key < 0x80) {
+            if (key == 0x01) running = 0;              // ESC
+            else if (key == 0x11) { dx = 0; dy = -1; } // W
+            else if (key == 0x1E) { dx = -1; dy = 0; } // A
+            else if (key == 0x1F) { dx = 0; dy = 1; }  // S
+            else if (key == 0x20) { dx = 1; dy = 0; }  // D
         }
 
-        // 2. Move
+        // 2. Calculate next position
         int nx = body_x[head] + dx;
         int ny = body_y[head] + dy;
 
-        // Collision check
-        if (nx <= 0 || nx >= 79 || ny <= 0 || ny >= 23) running = 0;
-
-        // Update head
-        head = (head + 1) % MAX_SNAKE_LEN;
-        body_x[head] = nx;
-        body_y[head] = ny;
-
-        // Eat Apple
-        if (nx == ax && ny == ay) {
-            length++;
-            ax = (cmos_get_sec() % 78) + 1;
-            ay = (get_uptime_seconds() % 22) + 1;
+        // 3. Collision Check
+        if (nx <= 0 || nx >= 79 || ny <= 0 || ny >= 23) {
+            running = 0; // Hit wall
         } else {
-            // Erase tail
-            int tail = (head - length + 1 + MAX_SNAKE_LEN) % MAX_SNAKE_LEN;
-            vga[(body_y[tail] * 80) + body_x[tail]] = 0x0F20;
-        }
+            // 4. Update head
+            head = (head + 1) % MAX_SNAKE_LEN;
+            body_x[head] = nx;
+            body_y[head] = ny;
 
-        // Draw Apple and Head
-        vga[(ay * 80) + ax] = 0x0C40; // Red @
-        vga[(ny * 80) + nx] = 0x2F4F; // Green O
+            // 5. Apple logic
+            if (nx == ax && ny == ay) {
+                if (length < MAX_SNAKE_LEN - 1) length++;
+                ax = (cmos_get_sec() % 77) + 1;
+                ay = (get_uptime_ms() % 21) + 1;
+                vga[(ay * 80) + ax] = 0x0C40; // New Apple
+            } else {
+                // 6. Erase tail
+                int tail = (head - length + 1 + MAX_SNAKE_LEN) % MAX_SNAKE_LEN;
+                vga[(body_y[tail] * 80) + body_x[tail]] = 0x0F20; // 0x0F20 is space
+            }
+
+            // 7. Draw Head
+            vga[(ny * 80) + nx] = 0x2F4F; 
+        }
 
         sleep_ms(150);
     }
     vga_clear();
+    vga_write("Game Over! Returned to shell.\n> ");
 }
 
 /* --- Shell Logic --- */
