@@ -114,10 +114,13 @@ gdt32_ptr:
 
 align 16
 gdt64:
-    dq 0                        ; Null
-    dq 0                        ; Unused
-    dq 0                        ; Unused
-    dq (1<<43) | (1<<44) | (1<<47) | (1<<53) ; 64-bit Code
+    dq 0                        ; 0x00 Null
+    dq 0                        ; 0x08 Unused
+    dq 0                        ; 0x10 Unused
+    dq (1<<43) | (1<<44) | (1<<47) | (1<<53) ; 0x18 Kernel Code
+    dq (1<<44) | (1<<47) | (3<<45)           ; 0x20 Kernel Data
+    dq (1<<43) | (1<<44) | (1<<47) | (1<<53) | (3<<45) ; 0x28 User Code (DPL 3)
+    dq (1<<44) | (1<<47) | (3<<45)           ; 0x30 User Data (DPL 3)
 gdt64_ptr:
     dw $ - gdt64 - 1
     dq gdt64
