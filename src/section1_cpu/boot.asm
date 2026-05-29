@@ -117,11 +117,22 @@ gdt64:
     dq 0                        ; 0x00 Null
     dq 0                        ; 0x08 Unused
     dq 0                        ; 0x10 Unused
-    dq (1<<43) | (1<<44) | (1<<47) | (1<<53) ; 0x18 Kernel Code
-    dq (1<<44) | (1<<47) | (3<<45)           ; 0x20 Kernel Data
-    dq (1<<43) | (1<<44) | (1<<47) | (1<<53) | (3<<45) ; 0x28 User Code (DPL 3)
-    dq (1<<44) | (1<<47) | (3<<45)           ; 0x30 User Data (DPL 3)
-		dq 0, 0
+    dq (1<<43) | (1<<44) | (1<<47) | (1<<53)       ; 0x18 Kernel Code
+    dq (1<<44) | (1<<47) | (3<<45)                 ; 0x20 Kernel Data
+    dq (1<<43) | (1<<44) | (1<<47) | (1<<53) | (3<<45) ; 0x28 User Code
+    dq (1<<44) | (1<<47) | (3<<45)                 ; 0x30 User Data
+    
+    ; The 16-byte TSS Descriptor (Index 0x38)
+    ; This tells the CPU where to look for our TSS structure
+    dw 0x68               ; Limit (104 bytes)
+    dw 0                  ; Base Low
+    db 0                  ; Base Mid
+    db 0x89               ; Access: Present, DPL 0, System, 64-bit TSS
+    db 0x00               ; Flags
+    db 0                  ; Base High
+    dd 0                  ; Base Upper
+    dd 0                  ; Reserved
+
 gdt64_ptr:
     dw $ - gdt64 - 1
     dq gdt64
