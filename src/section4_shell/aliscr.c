@@ -1,5 +1,4 @@
 #include "aliscr.h"
-#include "../section5_posix/vfs.h"
 /* EXTERN DECLARATIONS (Since we aren't using headers) */
 extern void vga_write(const char* data);
 extern void vga_putchar(char c);
