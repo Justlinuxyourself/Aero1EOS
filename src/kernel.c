@@ -287,7 +287,7 @@ void kernel_main() {
     vga_write("ERROR! NO DISK FOUND!\n");
     }
     log_verbose("TSS", "SETUP TSS...");
-    setup_tss((uint64_t)&stacktop);
+    setup_tss((uint64_t)&stack_top);
     log_verbose("TSS", "LOAD TSS");
     load_tss();
     log_verbose("KRNL", "Kernel size is...");
