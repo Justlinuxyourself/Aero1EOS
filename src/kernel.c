@@ -48,6 +48,9 @@ extern void sleep();
 extern void init_idt(void);
 extern uint8_t _kernel_start;
 extern uint8_t _kernel_end;
+extern uint64_t stack_top;
+extern void setup_tss(uint64_t kernel_stack);
+extern void load_tss();
 bool ata_probe(uint16_t port);
 int strcmp_custom(char* s1, char* s2) {
     int i = 0;
@@ -283,7 +286,10 @@ void kernel_main() {
     } else {
     vga_write("ERROR! NO DISK FOUND!\n");
     }
-
+    log_verbose("TSS", "SETUP TSS...");
+    setup_tss((uint64_t)&stacktop);
+    log_verbose("TSS", "LOAD TSS");
+    load_tss();
     log_verbose("KRNL", "Kernel size is...");
     char size_buf[12];
     vga_write(itoa((int)(_kernel_end - _kernel_start), size_buf));
