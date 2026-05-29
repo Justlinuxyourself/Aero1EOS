@@ -30,7 +30,7 @@ $(PAYLOAD_H):
 # --- PASS 2: Link the binary ---
 $(BIN): $(PAYLOAD_H) $(OBJ)
 	@echo "--- LINKING AERO1EOS BINARY ---"
-	ld $(LDFLAGS) -o $(BIN) $(OBJDIR)/section1_cpu/boot.o $(filter-out $(OBJDIR)/section1_cpu/boot.o, $(OBJ))
+	ld $(LDFLAGS) -o $(BIN) $(OBJ)
 
 # --- PASS 3: Replace the dummy header with the REAL data ---
 # This rule is called manually or via a special target to avoid the circular loop
