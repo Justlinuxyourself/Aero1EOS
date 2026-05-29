@@ -2006,7 +2006,6 @@ void shell_init() {
     shell_register_command("calc", "Calculator", command_calc);
     shell_register_command("peek", "Inspect raw memory addresses", cmd_peek);
     shell_register_command("poke", "Write to memory addrs", cmd_poke);
-    shell_register_command("run", "Execute AliScript code", cmd_run_script_file);
     shell_register_command("run", "Execute AliScript code", cmd_run_script);
     shell_register_command("ayah", "Choose Random Quran Ayah and Print it (im turning into terry davis)", cmd_ayah);
     shell_register_command("verse", "Choose Random Bible Verse and Print it", cmd_verse);
