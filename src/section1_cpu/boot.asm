@@ -144,4 +144,5 @@ pdpt: resb 4096
 pdt:  resb 4096
 stack_bottom:
     resb 16384                  ; 16KB Stack
+global stack_top
 stack_top:
