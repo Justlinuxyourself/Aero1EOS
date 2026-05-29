@@ -121,6 +121,7 @@ gdt64:
     dq (1<<44) | (1<<47) | (3<<45)           ; 0x20 Kernel Data
     dq (1<<43) | (1<<44) | (1<<47) | (1<<53) | (3<<45) ; 0x28 User Code (DPL 3)
     dq (1<<44) | (1<<47) | (3<<45)           ; 0x30 User Data (DPL 3)
+		dq 0, 0
 gdt64_ptr:
     dw $ - gdt64 - 1
     dq gdt64
