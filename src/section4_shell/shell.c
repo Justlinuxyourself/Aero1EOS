@@ -8,7 +8,6 @@ All rights reserved.
 #include "aliscr.h"
 #include "frames.h"
 #include "../section3_io/alifs.h"
-#include "../section5_posix/vfs.h"
 #include <stdint.h>
 #define NOTEBOOK_YELLOW 0x1E
 #define VGA_ADDRESS 0xB8000
@@ -1561,52 +1560,6 @@ void killscreen() {
         for(volatile int i = 0; i < 60000000; i++);
     }
 }
-void cmd_test_posix(char* args) {
-    vga_write("\n=== STARTING POSIX VFS LAYER TEST ===\n");
-
-    // TEST 1: Direct Console Write (stdout)
-    vga_write("[Test 1] Writing directly to fd 1 (stdout)...\n");
-    posix_write(1, "--> Success: Hello stdout via POSIX!\n\n", 38);
-
-    // TEST 2: Creating and Writing a File
-    vga_write("[Test 2] Creating and writing to /test.txt...\n");
-    int fd_write = posix_open("/test.txt");
-    if (fd_write < 0) {
-        vga_write("--> ERROR: Failed to open/create /test.txt\n");
-        return;
-    }
-
-    // Write data in sequential blocks to test the stream tracker
-    posix_write(fd_write, "AliOS POSIX System Stream Test.\n", 32);
-    posix_write(fd_write, "Line two of the text file.\n", 27);
-    
-    vga_write("--> Closing file (This should trigger AliFS Auto-Save)...\n");
-    posix_close(fd_write);
-    vga_write("--> File closed.\n\n");
-
-    // TEST 3: Reading back the data we just wrote
-    vga_write("[Test 3] Reading back /test.txt via POSIX streams...\n");
-    int fd_read = posix_open("/test.txt");
-    if (fd_read < 0) {
-        vga_write("--> ERROR: Failed to open /test.txt for reading\n");
-        return;
-    }
-
-    char read_buf[64];
-    int bytes_read;
-    vga_write("--> Content retrieved:\n------------------\n");
-    
-    // Read in chunks of 10 bytes to prove the offset tracking works perfectly
-    while ((bytes_read = posix_read(fd_read, read_buf, 10)) > 0) {
-        read_buf[bytes_read] = '\0'; // Safeguard string terminator
-        vga_write(read_buf);
-    }
-    vga_write("\n------------------\n");
-
-    posix_close(fd_read);
-    vga_write("=== POSIX LAYER TEST COMPLETE ===\n\n");
-}
-
 void cmd_cmatrix(char* args) {
     (void)args;
 
@@ -2085,7 +2038,6 @@ void shell_init() {
     shell_register_command("disablestat", "DISABLE STATus bar", disable_status_bar);
     shell_register_command("enablestat", "ENABLE STATus bar", enable_status_bar);
     shell_register_command("killscreen", "KillScreen", killscreen);
-    shell_register_command("testposix", "Verify POSIX open/read/write/close functionality", cmd_test_posix);
     shell_register_command("cmatrix", "Matrix digital rain screen effect", cmd_cmatrix);
     shell_register_command("ss", "Bouncing Aero1EOS logo screensaver", cmd_dvd);
     shell_register_command("socials", "Display Aero1EOS creator contact", cmd_socials);
