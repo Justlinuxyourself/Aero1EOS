@@ -104,13 +104,11 @@ jobs:
             git push
           fi
       - name: Post Discord Report
-        # CRITICAL: This makes the step run even if building or releasing crashed!
         if: always()
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
           BUILD_STATUS: ${{ steps.build_step.outcome }}
         run: |
-          # Automatically extract the top commit message into a shell variable
           LATEST_MSG=$(git log -1 --pretty=%B)
           export COMMIT_MSG="$LATEST_MSG"
 
@@ -118,40 +116,44 @@ jobs:
           import json
           import os
           import requests
+          import random
 
           def send_report():
               webhook_url = os.getenv('DISCORD_WEBHOOK')
               commit_msg = os.getenv('COMMIT_MSG', 'Manual Sync/Update')
               build_status = os.getenv('BUILD_STATUS', 'failure')
               
-              # Set up title, color, and descriptions based on success/failure
+              # List of real-life aviation photo URLs
+              plane_images = [
+                  "https://tenor.com/view/airplane-dancing-dance-dance-moves-dancing-airplane-gif-18115923",
+                  "https://tenor.com/view/a330neo-airbus-takeoff-airplane-gif-7174410983673829180",
+                  "https://tenor.com/view/mighty-machines-take-flight-flight-flying-mcdonnell-douglas-dc-10-gif-1014053156187718265",
+                  "https://tenor.com/view/boeing-boeing-quality-airplane-wheel-drop-airplane-drop-wheel-gif-135884565285573600",
+              ]
+              
+              # Set up content based on success/failure
               if build_status == 'success':
                   title = "Aero1EOS Build Successful! HELL YEA-🦅"
-                  color = 2326507 # Greenish-Blue
+                  color = 2326507 
                   description = f"**Commit Details:**\n{commit_msg}\n\n"
                   
-                  if not os.path.exists('stats.json'):
-                      description += "_No source changes._"
-                  else:
+                  if os.path.exists('stats.json'):
                       try:
                           with open('stats.json', 'r') as f:
                               data = json.load(f)
-                          if not data.get('files'):
-                              description += "_No source changes._"
-                          else:
+                          if data.get('files'):
                               for file in data['files']:
                                   stats = []
-                                  if int(file['added']) > 0: stats.append(f"+{file['added']} added")
-                                  if int(file['removed']) > 0: stats.append(f"-{file['removed']} removed")
-                                  if int(file['changed']) > 0: stats.append(f"~{file['changed']} changed")
-                                  
-                                  stat_line = " | ".join(stats) if stats else "No line changes"
+                                  if int(file['added']) > 0: stats.append(f"+{file['added']}")
+                                  if int(file['removed']) > 0: stats.append(f"-{file['removed']}")
+                                  if int(file['changed']) > 0: stats.append(f"~{file['changed']}")
+                                  stat_line = " | ".join(stats) if stats else "No changes"
                                   description += f"**`{file['name']}`**\n`{stat_line}`\n"
                       except:
                           description += "_Stats generation failed._"
               else:
                   title = "Build Failed! ☹️☹️☹️ Ali is Suffering Right now"
-                  color = 15158332 # Warning Red
+                  color = 15158332
                   description = f"**Failed Commit:**\n{commit_msg}\n\nCheck the GitHub Actions tab to inspect the GCC/NASM compiler logs."
 
               payload = {
@@ -159,7 +161,8 @@ jobs:
                   "embeds": [{
                       "title": title,
                       "description": description,
-                      "color": color
+                      "color": color,
+                      "image": {"url": random.choice(plane_images)}
                   }]
               }
               requests.post(webhook_url, json=payload)
