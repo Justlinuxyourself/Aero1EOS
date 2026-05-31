@@ -1969,6 +1969,48 @@ void cmd_snake(char* args) {
     vga_clear();
     vga_write("Game Over! Returned to shell.\n");
 }
+#include <posix/test_syscall.h>
+#include <posix/syscall.h>
+#include <stdint.h>
+
+// Initialize the global variable here
+int fd_result = -1;
+
+extern void vga_write(const char* str);
+
+void run_full_posix_test() {
+    vga_write("--- POSIX BRIDGE TEST START ---\n");
+
+    // TEST 1: Syscall Write (Standard Output)
+    const char* msg = "SUCCESS: Syscall WRITE reached kernel!\n";
+    __asm__ volatile (
+        "mov $1, %%rax;"    // SYS_WRITE
+        "mov $1, %%rbx;"    // FD 1 (STDOUT)
+        "mov %0, %%rcx;"    // Buffer address
+        "mov $40, %%rdx;"   // Length
+        "int $0x80;"
+        : 
+        : "r"(msg)
+        : "rax", "rbx", "rcx", "rdx"
+    );
+
+    // TEST 2: Syscall Open (AliFS Integration)
+    __asm__ volatile (
+        "mov $2, %%rax;"    // SYS_OPEN
+        "mov %0, %%rbx;"    // Path string
+        "int $0x80;"
+        "mov %%rax, %0;"
+        : "=r"(fd_result)
+        : "r"("test.txt")
+        : "rax", "rbx"
+    );
+
+    if (fd_result >= 0) {
+        vga_write("SUCCESS: AliFS file opened!\n");
+    } else {
+        vga_write("FAILURE: Could not open AliFS file, Problem in ATA Driver OR Emulator OR you didnt create test.txt with crfi (UTM SE AND LIMBO IS BAD ON ATA DRIVERS)\n");
+    }
+}
 
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
@@ -2044,7 +2086,7 @@ void shell_init() {
     shell_register_command("history", "HISTORY", cmd_history);
     shell_register_command("birthday", "Show OS age and birthday", cmd_birthday);
     shell_register_command("snake", "Play Snake game", cmd_snake);
-
+    shell_register_command("testposix", "TEST POSIX", run_full_posix_test);
 }
 
 void shell_dispatch(char* buffer) {
