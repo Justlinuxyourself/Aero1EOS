@@ -1,3 +1,5 @@
+#include "syscall.h"
+
 int vfs_open(char* path);
 int vfs_read(int fd, uint8_t* buffer, int count);
 int vfs_write(int fd, uint8_t* buffer, int count);
