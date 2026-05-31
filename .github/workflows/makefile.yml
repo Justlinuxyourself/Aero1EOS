@@ -125,10 +125,10 @@ jobs:
               
               # List of real-life aviation photo URLs
               plane_images = [
-                  "https://tenor.com/view/airplane-dancing-dance-dance-moves-dancing-airplane-gif-18115923",
-                  "https://tenor.com/view/a330neo-airbus-takeoff-airplane-gif-7174410983673829180",
-                  "https://tenor.com/view/mighty-machines-take-flight-flight-flying-mcdonnell-douglas-dc-10-gif-1014053156187718265",
-                  "https://tenor.com/view/boeing-boeing-quality-airplane-wheel-drop-airplane-drop-wheel-gif-135884565285573600",
+                  "https://tenor.com/boaWt.gif",
+                  "https://tenor.com/iH82COiBgVA.gif",
+                  "https://tenor.com/bm4xmDK2fK9.gif",
+                  "https://tenor.com/kcv18v74Mu.gif",
               ]
               
               # Set up content based on success/failure
