@@ -128,7 +128,7 @@ char history[MAX_HISTORY][80];
 int history_idx = 0;
 int history_count = 0;
 #define MAX_SNAKE_LEN 100
-#include "section7_posix/syscall.h"
+#include "../section7_posix/syscall.h"
 int fd_result = -1;
 
 /* --- String Helpers --- */
