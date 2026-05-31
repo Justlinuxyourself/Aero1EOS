@@ -128,6 +128,9 @@ char history[MAX_HISTORY][80];
 int history_idx = 0;
 int history_count = 0;
 #define MAX_SNAKE_LEN 100
+#include "section7_posix/syscall.h"
+int fd_result = -1;
+
 /* --- String Helpers --- */
 int strcmp(const char* s1, const char* s2) {
     while (*s1 && (*s1 == *s2)) { s1++; s2++; }
@@ -1969,15 +1972,6 @@ void cmd_snake(char* args) {
     vga_clear();
     vga_write("Game Over! Returned to shell.\n");
 }
-#include <posix/test_syscall.h>
-#include <posix/syscall.h>
-#include <stdint.h>
-
-// Initialize the global variable here
-int fd_result = -1;
-
-extern void vga_write(const char* str);
-
 void run_full_posix_test() {
     vga_write("--- POSIX BRIDGE TEST START ---\n");
 
