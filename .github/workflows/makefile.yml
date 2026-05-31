@@ -125,10 +125,10 @@ jobs:
               
               # List of real-life aviation photo URLs
               plane_images = [
-                  "https://tenor.com/boaWt.gif",
-                  "https://tenor.com/iH82COiBgVA.gif",
-                  "https://tenor.com/bm4xmDK2fK9.gif",
-                  "https://tenor.com/kcv18v74Mu.gif",
+                  "https://upload.wikimedia.org/wikipedia/commons/6/64/RSAF_Typhoon_at_Malta_-_Gordon_Zammit.jpg",
+                  "https://upload.wikimedia.org/wikipedia/commons/7/72/RSF484_departing_East_Midlands_Airport_%28altered%29.jpg",
+                  "https://upload.wikimedia.org/wikipedia/commons/8/86/Saudi_Hawks_at_airpower_%28cropped%29.jpg",
+                  "https://upload.wikimedia.org/wikipedia/commons/5/53/RSAF_KC-707_%28cropped%29.jpg",
               ]
               
               # Set up content based on success/failure
