@@ -90,7 +90,7 @@ void init_idt() {
         idt[i].offset_low       = (uint16_t)(addr & 0xFFFF);
         idt[i].selector         = 0x18; // Fits 64-bit selector from boot.asm
         idt[i].ist              = 0;
-        idt[i].type_attributes  = 0x8E;
+        idt[i].type_attributes  = 0xEE;
         idt[i].offset_mid       = (uint16_t)((addr >> 16) & 0xFFFF);
         idt[i].offset_high      = (uint32_t)((addr >> 32) & 0xFFFFFFFF);
         idt[i].reserved         = 0;
