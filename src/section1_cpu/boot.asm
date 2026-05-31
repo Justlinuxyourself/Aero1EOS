@@ -123,15 +123,17 @@ gdt64:
     dq (1<<44) | (1<<47) | (3<<45)                 ; 0x30 User Data
     
     ; The 16-byte TSS Descriptor (Index 0x38)
-    ; This tells the CPU where to look for our TSS structure
-    dw 0x68               ; Limit (104 bytes)
-    dw 0                  ; Base Low
-    db 0                  ; Base Mid
-    db 0x89               ; Access: Present, DPL 0, System, 64-bit TSS
+		tss_descriptor:
+    dw 0x68               ; Limit
+		tss_base_low:
+    dw 0                  ; Base 0:15
+    db 0                  ; Base 16:23
+    db 0x89               ; Access
     db 0x00               ; Flags
-    db 0                  ; Base High
-    dd 0                  ; Base Upper
+    db 0                  ; Base 24:31
+    dd 0                  ; Base 32:63
     dd 0                  ; Reserved
+
 
 gdt64_ptr:
     dw $ - gdt64 - 1
