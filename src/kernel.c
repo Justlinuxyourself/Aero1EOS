@@ -51,6 +51,7 @@ extern uint8_t _kernel_end;
 extern uint64_t stack_top;
 extern void setup_tss(uint64_t kernel_stack);
 extern void load_tss();
+extern void patch_gdt_tss();
 bool ata_probe(uint16_t port);
 int strcmp_custom(char* s1, char* s2) {
     int i = 0;
@@ -280,15 +281,17 @@ void kernel_main() {
     log_verbose("ATA", "Probing ATA...");
     
     if (ata_probe(0x1F0)) {
-    vga_write("DISK FOUND ON PRIM! (0x1F0)");
+    vga_write("DISK FOUND ON PRIM! (0x1F0)\n");
     } else if (ata_probe(0x170)) {
-    vga_write("DISK FOUND ON SEC! (0x170)");
+    vga_write("DISK FOUND ON SEC! (0x170)\n");
     } else {
     vga_write("ERROR! NO DISK FOUND!\n");
     }
     log_verbose("TSS", "SETUP TSS...");
     setup_tss((uint64_t)&stack_top);
-    log_verbose("TSS", "LOAD TSS");
+    log_verbose("TSS", "PATCH TSS...");
+    patch_gdt_tss();
+    log_verbose("TSS", "LOAD TSS...");
     load_tss();
     log_verbose("KRNL", "Kernel size is...");
     char size_buf[12];
@@ -310,7 +313,7 @@ void kernel_main() {
     
     vga_write("Aero1EOS 4 - made by a 12yo - Multi-TTY Mode\n");
     vga_write("System Ready. Use Ctrl+Alt+F1-F10 to switch.\n");
-    vga_write("> ");
+    vga_write("Press Enter.");
 
     int clock_ticks = 0;
 
