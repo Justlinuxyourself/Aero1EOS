@@ -1975,26 +1975,27 @@ void cmd_snake(char* args) {
 void run_full_posix_test() {
     vga_write("--- POSIX BRIDGE TEST START ---\n");
 
-    // TEST 1: Syscall Write (Standard Output)
+    // TEST 1: Syscall Write
     const char* msg = "SUCCESS: Syscall WRITE reached kernel!\n";
     __asm__ volatile (
-        "mov $1, %%rax;"    // SYS_WRITE
-        "mov $1, %%rbx;"    // FD 1 (STDOUT)
-        "mov %0, %%rcx;"    // Buffer address
-        "mov $40, %%rdx;"   // Length
+        "mov $1, %%rax;"
+        "mov $1, %%rbx;"    // FD 1
+        "mov %0, %%rcx;"    // Use 64-bit registers
+        "mov $40, %%rdx;"   
         "int $0x80;"
         : 
         : "r"(msg)
         : "rax", "rbx", "rcx", "rdx"
     );
 
-    // TEST 2: Syscall Open (AliFS Integration)
+    // TEST 2: Syscall Open
+    long fd_result; 
     __asm__ volatile (
-        "mov $2, %%rax;"    // SYS_OPEN
+        "mov $2, %%rax;"
         "mov %0, %%rbx;"    // Path string
         "int $0x80;"
-        "mov %%rax, %0;"
-        : "=r"(fd_result)
+        "mov %%rax, %1;"
+        : "=m"(fd_result)
         : "r"("test.txt")
         : "rax", "rbx"
     );
@@ -2002,9 +2003,10 @@ void run_full_posix_test() {
     if (fd_result >= 0) {
         vga_write("SUCCESS: AliFS file opened!\n");
     } else {
-        vga_write("FAILURE: Could not open AliFS file, Problem in ATA Driver OR Emulator OR you didnt create test.txt with crfi (UTM SE AND LIMBO IS BAD ON ATA DRIVERS)\n");
+        vga_write("FAILURE: Could not open AliFS file.\n");
     }
 }
+
 
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
