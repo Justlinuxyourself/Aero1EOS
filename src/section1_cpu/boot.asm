@@ -124,16 +124,18 @@ gdt64:
     
     ; The 16-byte TSS Descriptor (Index 0x38)
 		tss_descriptor:
-    dw 0x68               ; Limit
-		tss_base_low:
-    dw 0                  ; Base 0:15
-    db 0                  ; Base 16:23
-    db 0x89               ; Access
-    db 0x00               ; Flags
-    db 0                  ; Base 24:31
-    dd 0                  ; Base 32:63
-    dd 0                  ; Reserved
-
+    dw 0x68
+		global tss_base_low
+		tss_base_low: dw 0
+		global tss_base_mid
+		tss_base_mid: db 0
+    db 0x89
+    db 0x00
+		global tss_base_high
+		tss_base_high: db 0
+		global tss_base_upper
+		tss_base_upper: dd 0
+    dd 0
 
 gdt64_ptr:
     dw $ - gdt64 - 1
