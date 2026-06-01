@@ -1,4 +1,10 @@
 #include <stdint.h>
+#include <stddef.h>
+
+extern uint16_t tss_base_low;
+extern uint8_t  tss_base_mid;
+extern uint8_t  tss_base_high;
+extern uint32_t tss_base_upper;
 
 typedef struct {
     uint32_t reserved0;
@@ -12,13 +18,11 @@ typedef struct {
     uint16_t iopb_offset;
 } __attribute__((packed)) tss_t;
 
-// Aligned to 16 bytes for hardware safety
 static tss_t tss __attribute__((aligned(16)));
 
 void setup_tss(uint64_t kernel_stack) {
     uint8_t* ptr = (uint8_t*)&tss;
     for (size_t i = 0; i < sizeof(tss_t); i++) ptr[i] = 0;
-
     tss.rsp0 = kernel_stack;
     tss.iopb_offset = sizeof(tss_t);
 }
