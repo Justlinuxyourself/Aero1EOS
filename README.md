@@ -72,6 +72,8 @@ Aero1EOS 4 is a custom-built, 64-bit "Notebook" style operating system. It featu
 | `tdadd` | adds todo to mem |
 | `tdshw` | shows todo from mem |
 | `calc` | Calculator |
+-# many more with the `help` command 🥹
+
 ## 📁 Directory Structure
 ```text
 .
