@@ -16,6 +16,21 @@ static uint8_t inode_sector[512] __attribute__((aligned(8)));
 // Static buffer for reading file content
 static char file_content_buffer[512] __attribute__((aligned(8)));
 
+char *strchr(const char *str, int character) {
+    while (*str != '\0') {
+        if (*str == (char)character) {
+            return (char *)str;
+        }
+        str++;
+    }
+
+    if ((char)character == '\0') {
+        return (char *)str;
+    }
+
+    return NULL;
+}
+
 void alifs_format() {
     vga_write("Formatting AliFS...\n");
     for (int i = 0; i < 512; i++) inode_sector[i] = 0;
