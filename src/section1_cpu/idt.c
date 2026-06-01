@@ -90,7 +90,7 @@ void init_idt() {
         // If i < 32, use exception_table
         // If i == 0x80, use syscall handler address
         // Else, point to a null or default handler
-        uint64_t addr = (i < 32) ? exception_table[i] : (uint64_t)syscall_stub;
+        uint64_t addr = (i < 32) ? exception_table[i] : (uint64_t)isr_syscall;
 
         idt[i].offset_low       = (uint16_t)(addr & 0xFFFF);
         idt[i].selector         = 0x18; 
