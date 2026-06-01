@@ -5,7 +5,7 @@ extern void vga_write(const char* data);
 extern void vga_putchar(char c);
 extern void update_hardware_cursor(int pos);
 extern void play_sound(unsigned int nFrequence);
-extern void syscall_stub(void);
+extern void isr_syscall(void);
 
 // Independent TTY structure matching vga.c exactly
 typedef struct {
