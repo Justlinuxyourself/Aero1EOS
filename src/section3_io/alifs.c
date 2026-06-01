@@ -1,7 +1,6 @@
 #include "alifs.h"
 #include <stdint.h>
 #include <stddef.h>
-#include <string.h>
 extern void ide_write_sector_bytes(uint32_t lba, uint8_t* buffer);
 extern void ide_read_sector_bytes(uint32_t lba, uint8_t* buffer);
 extern int strcmp(const char* s1, const char* s2);
