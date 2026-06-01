@@ -2037,25 +2037,25 @@ void ddddmvse() {
   vga_write("MAX ");
   play_sound(330);
   sleep(1);
-  no_sound();
+  nosound();
   sleep_ms(100);
   
   vga_write("VER");
   play_sound(330);
   sleep(2);
-  no_sound();
+  nosound();
   sleep_ms(100);
   
   vga_write("STAPP");
   play_sound(262);
   sleep(1);
-  no_sound();
+  nosound();
   sleep_ms(100);
   
   vga_write("EN");
   play_sound(247);
   sleep(1);
-  no_sound();
+  nosound();
   sleep_ms(100);
 }
 /* --- Shell Logic --- */
