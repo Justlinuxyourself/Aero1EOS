@@ -1978,27 +1978,29 @@ void run_full_posix_test() {
     // TEST 1: Syscall Write
     const char* msg = "SUCCESS: Syscall WRITE reached kernel!\n";
     __asm__ volatile (
-        "mov $1, %%rax;"
-        "mov $1, %%rbx;"    // FD 1
-        "mov %0, %%rcx;"    // Use 64-bit registers
-        "mov $40, %%rdx;"   
-        "int $0x80;"
-        : 
-        : "r"(msg)
-        : "rax", "rbx", "rcx", "rdx"
-    );
+      "mov $1, %%rax;"
+      "mov $1, %%rbx;"
+      "mov %0, %%rcx;"    // Pass pointer in RCX
+      "mov $40, %%rdx;"
+      "int $0x80;"
+      : 
+      : "r"(msg)          // The compiler will put the address of msg in a register
+      : "rax", "rbx", "rcx", "rdx"
+      );
 
-    // TEST 2: Syscall Open
-    long fd_result; 
+
+    long fd_result;
+    const char* path = "test.txt"; // Define the pointer explicitly
     __asm__ volatile (
-        "mov $2, %%rax;"
-        "mov %0, %%rbx;"    // Path string
-        "int $0x80;"
-        "mov %%rax, %1;"
-        : "=m"(fd_result)
-        : "r"("test.txt")
-        : "rax", "rbx"
-    );
+      "mov $2, %%rax;"
+      "mov %0, %%rbx;"    // Move pointer to RBX
+      "int $0x80;"
+      "mov %%rax, %1;"
+      : "=m"(fd_result)
+      : "r"(path)         // Compiler puts address of "test.txt" in path
+      : "rax", "rbx"
+      );
+
 
     if (fd_result >= 0) {
         vga_write("SUCCESS: AliFS file opened!\n");
