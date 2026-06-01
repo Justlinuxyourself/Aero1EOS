@@ -52,7 +52,7 @@ typedef struct {
     uint64_t ss;
 } __attribute__((packed)) CpuPanicState;
 
-static IdtEntry idt[32];
+static IdtEntry idt[256];
 static IdtPointer idt_ptr;
 
 extern uint64_t exception_table[32];
@@ -81,24 +81,29 @@ static void print_hex64(uint64_t value) {
 }
 
 void init_idt() {
-    // Set limit and base for the 32 system exception entry registers
-    idt_ptr.limit = (sizeof(IdtEntry) * 32) - 1;
+    // Set limit to cover 256 entries
+    idt_ptr.limit = (sizeof(IdtEntry) * 256) - 1;
     idt_ptr.base = (uint64_t)&idt;
 
-    for (int i = 0; i < 32; i++) {
-        uint64_t addr = exception_table[i];
+    // Initialize the IDT
+    for (int i = 0; i < 256; i++) {
+        // If i < 32, use exception_table
+        // If i == 0x80, use syscall handler address
+        // Else, point to a null or default handler
+        uint64_t addr = (i < 32) ? exception_table[i] : (uint64_t)syscall_stub;
+
         idt[i].offset_low       = (uint16_t)(addr & 0xFFFF);
-        idt[i].selector         = 0x18; // Fits 64-bit selector from boot.asm
+        idt[i].selector         = 0x18; 
         idt[i].ist              = 0;
-        idt[i].type_attributes  = 0xEE;
+        idt[i].type_attributes  = 0xEE; // Correctly enables Ring 3 access
         idt[i].offset_mid       = (uint16_t)((addr >> 16) & 0xFFFF);
         idt[i].offset_high      = (uint32_t)((addr >> 32) & 0xFFFFFFFF);
         idt[i].reserved         = 0;
     }
     
-    // Call native assembly instruction to bind this framework table to CPU
     __asm__ volatile("lidt %0" : : "m"(idt_ptr));
 }
+
 void kernel_panic_sound() {
     // Slide frequency down from 2000Hz to 100Hz
     for (int freq = 2000; freq > 100; freq -= 5) {
