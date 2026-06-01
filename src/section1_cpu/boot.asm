@@ -121,21 +121,23 @@ gdt64:
     dq (1<<44) | (1<<47) | (3<<45)                 ; 0x20 Kernel Data
     dq (1<<43) | (1<<44) | (1<<47) | (1<<53) | (3<<45) ; 0x28 User Code
     dq (1<<44) | (1<<47) | (3<<45)                 ; 0x30 User Data
-    
-    ; The 16-byte TSS Descriptor (Index 0x38)
-		tss_descriptor:
-    dw 0x68
-		global tss_base_low
-		tss_base_low: dw 0
-		global tss_base_mid
-		tss_base_mid: db 0
-    db 0x89
-    db 0x00
-		global tss_base_high
-		tss_base_high: db 0
-		global tss_base_upper
-		tss_base_upper: dd 0
-    dd 0
+
+    ; --- 16-Byte TSS Descriptor (Index 0x38) ---
+    ; Low 8 bytes
+    dw 0x67                         ; Limit: 103 bytes
+    global tss_base_low
+    tss_base_low:   dw 0            ; Base bits 0-15
+    global tss_base_mid
+    tss_base_mid:   db 0            ; Base bits 16-23
+    db 0x89                         ; Access: Present, Ring 0, TSS
+    db 0x00                         ; Flags
+    global tss_base_high
+    tss_base_high:  db 0            ; Base bits 24-31
+    ; High 8 bytes
+    global tss_base_upper
+    tss_base_upper: dd 0            ; Base bits 32-63
+    dd 0                            ; Reserved
+
 
 gdt64_ptr:
     dw $ - gdt64 - 1
