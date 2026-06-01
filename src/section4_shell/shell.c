@@ -2009,7 +2009,55 @@ void run_full_posix_test() {
     }
 }
 
-
+void ddddmvse() {
+  vga_write("DU ");
+  play_sound(220);
+  sleep(2);
+  nosound();
+  sleep_ms(100);
+  
+  vga_write("DU ");
+  play_sound(220);
+  sleep(2);
+  nosound();
+  sleep_ms(100);
+  
+  vga_write("DU ");
+  play_sound(220);
+  sleep(2);
+  nosound();
+  sleep_ms(100);
+  
+  vga_write("DU! ");
+  play_sound(330);
+  sleep(4);
+  nosound();
+  sleep_ms(100);
+  
+  vga_write("MAX ");
+  play_sound(330);
+  sleep(1);
+  no_sound();
+  sleep_ms(100);
+  
+  vga_write("VER");
+  play_sound(330);
+  sleep(2);
+  no_sound();
+  sleep_ms(100);
+  
+  vga_write("STAPP");
+  play_sound(262);
+  sleep(1);
+  no_sound();
+  sleep_ms(100);
+  
+  vga_write("EN");
+  play_sound(247);
+  sleep(1);
+  no_sound();
+  sleep_ms(100);
+}
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
     command_node_t* new_node = (command_node_t*)kmalloc(sizeof(command_node_t));
@@ -2085,6 +2133,7 @@ void shell_init() {
     shell_register_command("birthday", "Show OS age and birthday", cmd_birthday);
     shell_register_command("snake", "Play Snake game", cmd_snake);
     shell_register_command("testposix", "TEST POSIX", run_full_posix_test);
+    shell_register_command("max", "DUDUDUDUUUUU MAX VERSTAPPEN", ddddmvse);
 }
 
 void shell_dispatch(char* buffer) {
