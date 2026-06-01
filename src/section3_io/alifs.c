@@ -29,26 +29,21 @@ int alifs_create(char* name, char* data) {
     ide_read_sector_bytes(ALIFS_START_LBA + 1, inode_sector);
     alifs_inode_t* inodes = (alifs_inode_t*)inode_sector;
 
-    // --- STEP 1: FIX THE FILENAME ---
     char full_path[FILENAME_LEN];
+    // Force absolute paths: "/filename" or "/dir/filename"
     if (strcmp(current_path, "/") == 0) {
-        strcpy(full_path, name);
+        full_path[0] = '/';
+        strcpy(full_path + 1, name);
     } else {
         strcpy(full_path, current_path);
         int len = strlen(full_path);
         full_path[len] = '/';
-        full_path[len+1] = '\0';
-        
-        int i = 0;
-        while(name[i]) {
-            full_path[len+1+i] = name[i];
-            i++;
-        }
-        full_path[len+1+i] = '\0';
+        strcpy(full_path + len + 1, name);
     }
 
     int slot = -1;
     for (int i = 0; i < MAX_FILES; i++) {
+        // STRICT: Only match if the full path is identical
         if (inodes[i].active && strcmp(inodes[i].filename, full_path) == 0) {
             slot = i; break;
         }
@@ -61,28 +56,17 @@ int alifs_create(char* name, char* data) {
     inodes[slot].start_lba = ALIFS_START_LBA + 2 + slot;
     inodes[slot].size = strlen(data);
     inodes[slot].active = 1;
-    inodes[slot].is_dir = 0; 
+    inodes[slot].is_dir = 0;
 
-    // --- FIX: Zero out the bounce buffer explicitly ---
-    uint8_t write_bounce_buffer[512] __attribute__((aligned(8)));
-    for (int b = 0; b < 512; b++) {
-        write_bounce_buffer[b] = 0; // Wipe old stack frame values cleanly!
-    }
-
-    int data_len = strlen(data);
-    if (data_len > 511) data_len = 511; // Leave room for a terminal zero if needed
+    uint8_t write_bounce[512] = {0};
+    int data_len = strlen(data) > 511 ? 511 : strlen(data);
+    for (int b = 0; b < data_len; b++) write_bounce[b] = (uint8_t)data[b];
     
-    for (int b = 0; b < data_len; b++) {
-        write_bounce_buffer[b] = (uint8_t)data[b];
-    }
-
-    // Send clean, predictable sector bytes to drive
-    ide_write_sector_bytes(inodes[slot].start_lba, write_bounce_buffer);
-    
-    // Save inode entry alterations
+    ide_write_sector_bytes(inodes[slot].start_lba, write_bounce);
     ide_write_sector_bytes(ALIFS_START_LBA + 1, inode_sector);
     return 0;
 }
+
 
 void alifs_list() {
     ide_read_sector_bytes(ALIFS_START_LBA + 1, inode_sector);
@@ -90,17 +74,28 @@ void alifs_list() {
 
     vga_write("\nListing: "); vga_write(current_path); vga_write("\n");
     
+    int path_len = strlen(current_path);
     int count = 0;
+
     for (int i = 0; i < MAX_FILES; i++) {
-        if (inodes[i].active) {
-            // LOGIC: If in root (/), show everything.
-            // If in a folder, only show files that START with that folder name.
-            if (strcmp(current_path, "/") == 0 || strncmp(inodes[i].filename, current_path, strlen(current_path)) == 0) {
-                if (inodes[i].is_dir) vga_write("<DIR> ");
-                else vga_write("      ");
-                
-                vga_write(inodes[i].filename);
-                vga_write("\n");
+        if (!inodes[i].active) continue;
+
+        // Must start with current path
+        if (strncmp(inodes[i].filename, current_path, path_len) == 0) {
+            char* remainder = inodes[i].filename + path_len;
+            
+            // Logic: Is it a direct child?
+            // Root "/" -> remainder[0] is not '/', so children are just "file"
+            // Subdir "/dir" -> remainder[0] must be '/', remainder[1+] must NOT have '/'
+            if (strcmp(current_path, "/") == 0) {
+                if (remainder[0] != '/') { // Not a sub-path
+                    vga_write(inodes[i].is_dir ? "<DIR> " : "      ");
+                    vga_write(remainder); vga_write("\n");
+                    count++;
+                }
+            } else if (remainder[0] == '/' && strchr(remainder + 1, '/') == NULL) {
+                vga_write(inodes[i].is_dir ? "<DIR> " : "      ");
+                vga_write(remainder + 1); vga_write("\n");
                 count++;
             }
         }
@@ -114,29 +109,25 @@ char* alifs_read(char* name) {
     alifs_inode_t* inodes = (alifs_inode_t*)inode_sector;
 
     char full_path[FILENAME_LEN];
-    // Resolve path: if we aren't in root, check for prefix
     if (strcmp(current_path, "/") == 0) {
-        strcpy(full_path, name);
+        full_path[0] = '/';
+        strcpy(full_path + 1, name);
     } else {
         strcpy(full_path, current_path);
         int len = strlen(full_path);
         full_path[len] = '/';
-        strcpy(&full_path[len+1], name);
+        strcpy(full_path + len + 1, name);
     }
 
     for (int i = 0; i < MAX_FILES; i++) {
-        // Check both the raw name AND the full path name to be safe
-        if (inodes[i].active && (strcmp(inodes[i].filename, full_path) == 0 || strcmp(inodes[i].filename, name) == 0)) {
-            for(int j=0; j<512; j++) file_content_buffer[j] = 0;
+        // Only allow match if the full path is exactly correct
+        if (inodes[i].active && strcmp(inodes[i].filename, full_path) == 0) {
             ide_read_sector_bytes(inodes[i].start_lba, (uint8_t*)file_content_buffer);
             return file_content_buffer;
         }
     }
     return 0;
 }
-
-
-
 
 int alifs_mkdir(char* name) {
     // 1. Load the Inode Table into our buffer
