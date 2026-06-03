@@ -130,6 +130,7 @@ int history_count = 0;
 #define MAX_SNAKE_LEN 100
 #include "../section7_posix/syscall.h"
 int fd_result = -1;
+extern int alifs_delete_recursive(char* path);
 
 /* --- String Helpers --- */
 int strcmp(const char* s1, const char* s2) {
@@ -2058,6 +2059,48 @@ void ddddmvse() {
   nosound();
   sleep_ms(100);
 }
+void cmd_remv(char* args) {
+    // 1. Basic validation: ensure an argument was provided
+    if (args == 0 || args[0] == '\0') {
+        vga_write("Usage: remv <path>\n");
+        return;
+    }
+
+    // 2. Safety: Prevent accidental deletion of the root directory
+    if (strcmp(args, "/") == 0) {
+        vga_write("Error: Cannot delete root directory.\n");
+        return;
+    }
+
+    // 3. Logic to determine the target path
+    // If the path is relative (e.g., 'mydir'), prepend current_path
+    char target_path[256];
+    if (args[0] == '/') {
+        // Absolute path provided
+        strcpy(target_path, args);
+    } else {
+        // Relative path: current_path + / + args
+        if (strcmp(current_path, "/") == 0) {
+            target_path[0] = '/';
+            strcpy(target_path + 1, args);
+        } else {
+            strcpy(target_path, current_path);
+            int len = strlen(target_path);
+            target_path[len] = '/';
+            strcpy(target_path + len + 1, args);
+        }
+    }
+
+    // 4. Execute the deletion
+    if (alifs_delete_recursive(target_path) == 0) {
+        vga_write("Deleted: ");
+        vga_write(target_path);
+        vga_write("\n");
+    } else {
+        vga_write("Error: Could not delete path.\n");
+    }
+}
+
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
     command_node_t* new_node = (command_node_t*)kmalloc(sizeof(command_node_t));
@@ -2134,6 +2177,7 @@ void shell_init() {
     shell_register_command("snake", "Play Snake game", cmd_snake);
     shell_register_command("testposix", "TEST POSIX", run_full_posix_test);
     shell_register_command("max", "DUDUDUDUUUUU MAX VERSTAPPEN", ddddmvse);
+    shell_register_command("remv", "REMOVE", cmd_remv);
 }
 
 void shell_dispatch(char* buffer) {
