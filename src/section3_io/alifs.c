@@ -208,3 +208,37 @@ void alifs_read_into_buffer(char* name, uint8_t* target) {
     }
 }
 
+int alifs_delete_recursive(char* path) {
+    ide_read_sector_bytes(ALIFS_START_LBA + 1, inode_sector);
+    alifs_inode_t* inodes = (alifs_inode_t*)inode_sector;
+
+    int path_len = strlen(path);
+    int deleted_count = 0;
+
+    for (int i = 0; i < MAX_FILES; i++) {
+        if (!inodes[i].active) continue;
+
+        // Check if the current inode is the target OR a child of the target
+        // We check if it is an exact match OR if it starts with "path/"
+        int is_match = (strcmp(inodes[i].filename, path) == 0);
+        int is_child = (strncmp(inodes[i].filename, path, path_len) == 0 && 
+                        inodes[i].filename[path_len] == '/');
+
+        if (is_match || is_child) {
+            inodes[i].active = 0;
+            // Optionally clear filename for sanity
+            for(int j = 0; j < FILENAME_LEN; j++) inodes[i].filename[j] = 0;
+            deleted_count++;
+        }
+    }
+
+    if (deleted_count == 0) {
+        vga_write("Error: Path not found.\n");
+        return -1;
+    }
+
+    ide_write_sector_bytes(ALIFS_START_LBA + 1, inode_sector);
+    vga_write("Deleted directory and all contents.\n");
+    return 0;
+}
+
