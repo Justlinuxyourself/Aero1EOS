@@ -1,59 +1,64 @@
 import sys
 import struct
-import platform
 import os
 
 INODE_FMT = "<32sIIBB"
 INODE_SIZE = 42
+MAX_FILES = 12
 
 def recover(source, is_disk):
+    # If it's a disk, handle Windows raw access
     mode = "rb"
-    if is_disk and platform.system() == "Windows":
+    if is_disk and sys.platform == "win32":
         source = f"\\\\.\\{source}"
 
     try:
         with open(source, mode) as f:
+            # AliFS Inode Table is at ALIFS_START_LBA (20000) + 1
             f.seek(20001 * 512)
             inode_sector = f.read(512)
 
-            # First, extract all directories so we can save files into them
-            for i in range(12):
+            # 1. First pass: Collect all paths and create directories
+            inodes = []
+            for i in range(MAX_FILES):
                 offset = i * INODE_SIZE
                 chunk = inode_sector[offset : offset + INODE_SIZE]
+                if len(chunk) < INODE_SIZE: break
+                
                 name_bytes, lba, size, active, is_dir = struct.unpack(INODE_FMT, chunk)
                 
-                if active and is_dir:
-                    name = name_bytes.decode('utf-8', errors='ignore').strip('\x00').lstrip("/")
-                    if name:
-                        os.makedirs(name, exist_ok=True)
-                        print(f"[+] Created directory on host: {name}")
-
-                        # Second, extract files into their respective folders
-            f.seek(20001 * 512) 
-            for i in range(12):
-                offset = i * INODE_SIZE
-                chunk = inode_sector[offset : offset + INODE_SIZE]
-                name_bytes, lba, size, active, is_dir = struct.unpack(INODE_FMT, chunk)
-                
-                if active and not is_dir:
-                    name = name_bytes.decode('utf-8', errors='ignore').strip('\x00').lstrip("/")
+                if active:
+                    # Clean the path string
+                    name = name_bytes.decode('utf-8', errors='ignore').split('\x00')[0].strip()
+                    # Remove leading slash for local host path
+                    local_path = name.lstrip('/')
                     
-                    # NEW: Create parent directories for the file if they don't exist
-                    parent_dir = os.path.dirname(name)
-                    if parent_dir and not os.path.exists(parent_dir):
-                        os.makedirs(parent_dir, exist_ok=True)
-                        print(f"    [+] Created missing parent directory: {parent_dir}")
+                    if is_dir:
+                        os.makedirs(local_path, exist_ok=True)
+                        print(f"[+] Created directory: {local_path}")
+                    
+                    inodes.append({'name': local_path, 'lba': lba, 'size': size, 'is_dir': is_dir})
 
-                    f.seek(lba * 512)
-                    data = f.read(size)
-                    with open(name, "wb") as outfile:
+            # 2. Second pass: Extract files
+            for entry in inodes:
+                if not entry['is_dir'] and entry['lba'] > 0:
+                    f.seek(entry['lba'] * 512)
+                    data = f.read(entry['size'])
+                    
+                    # Ensure parent dir exists (handles deep nesting like /a/b/c/file.txt)
+                    parent = os.path.dirname(entry['name'])
+                    if parent and not os.path.exists(parent):
+                        os.makedirs(parent, exist_ok=True)
+                        
+                    with open(entry['name'], "wb") as outfile:
                         outfile.write(data)
-                        print(f"    [+] Extracted file: {name}")
-except Exception as e:
+                        print(f"    [+] Extracted file: {entry['name']}")
+
+    except Exception as e:
         print(f"[!] Error: {e}")
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        print("Usage: python ali_recover.py <d|i> <path>")
+        print("Usage: python pythonalifsrecover.py <d|i> <path>")
         sys.exit(1)
     recover(sys.argv[2], sys.argv[1] == 'd')
