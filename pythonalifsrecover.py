@@ -28,8 +28,8 @@ def recover(source, is_disk):
                         os.makedirs(name, exist_ok=True)
                         print(f"[+] Created directory on host: {name}")
 
-            # Second, extract files into their respective folders
-            f.seek(20001 * 512) # Rewind to read files
+                        # Second, extract files into their respective folders
+            f.seek(20001 * 512) 
             for i in range(12):
                 offset = i * INODE_SIZE
                 chunk = inode_sector[offset : offset + INODE_SIZE]
@@ -37,13 +37,19 @@ def recover(source, is_disk):
                 
                 if active and not is_dir:
                     name = name_bytes.decode('utf-8', errors='ignore').strip('\x00').lstrip("/")
+                    
+                    # NEW: Create parent directories for the file if they don't exist
+                    parent_dir = os.path.dirname(name)
+                    if parent_dir and not os.path.exists(parent_dir):
+                        os.makedirs(parent_dir, exist_ok=True)
+                        print(f"    [+] Created missing parent directory: {parent_dir}")
+
                     f.seek(lba * 512)
                     data = f.read(size)
                     with open(name, "wb") as outfile:
                         outfile.write(data)
                         print(f"    [+] Extracted file: {name}")
-                        
-    except Exception as e:
+except Exception as e:
         print(f"[!] Error: {e}")
 
 if __name__ == "__main__":
