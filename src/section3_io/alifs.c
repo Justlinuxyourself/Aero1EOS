@@ -161,45 +161,50 @@ char* alifs_read(char* name) {
 }
 
 int alifs_mkdir(char* name) {
-    // 1. Load the Inode Table into our buffer
     ide_read_sector_bytes(ALIFS_START_LBA + 1, inode_sector);
     alifs_inode_t* inodes = (alifs_inode_t*)inode_sector;
 
+    // 1. Normalize the name
+    char full_name[FILENAME_LEN];
+    if (name[0] != '/') {
+        full_name[0] = '/';
+        strcpy(full_name + 1, name);
+    } else {
+        strcpy(full_name, name);
+    }
+
     int slot = -1;
 
-    // 2. Scan the table for duplicates and find an empty slot
+    // 2. Scan the table using FULL_NAME
     for (int i = 0; i < MAX_FILES; i++) {
-        // Safety: If a file/dir with this name already exists, abort
-        if (inodes[i].active && strcmp(inodes[i].filename, name) == 0) {
+        // USE full_name HERE
+        if (inodes[i].active && strcmp(inodes[i].filename, full_name) == 0) {
             vga_write("Error: Directory or file already exists.\n");
             return -1;
         }
 
-        // Find the first available inactive slot
         if (slot == -1 && !inodes[i].active) {
             slot = i;
         }
     }
 
-    // 3. Error if no slots are available
     if (slot == -1) {
         vga_write("Error: Inode table full. Cannot create directory.\n");
         return -1;
     }
 
-    // 4. Fill the Inode metadata
-    strcpy(inodes[slot].filename, name);
-    inodes[slot].start_lba = 0; // Directories don't store data in sectors yet
+    // 3. Fill metadata using FULL_NAME
+    strcpy(inodes[slot].filename, full_name); // USE full_name HERE
+    inodes[slot].start_lba = 0;
     inodes[slot].size = 0;
     inodes[slot].active = 1;
-    inodes[slot].is_dir = 1;    // The magic flag that identifies this as a folder
+    inodes[slot].is_dir = 1;
 
-    // 5. Commit the updated table back to the disk at LBA 20001
     ide_write_sector_bytes(ALIFS_START_LBA + 1, inode_sector);
-
     vga_write("Directory created successfully.\n");
     return 0;
 }
+
 int alifs_is_directory(char* name) {
     ide_read_sector_bytes(ALIFS_START_LBA + 1, inode_sector);
     alifs_inode_t* inodes = (alifs_inode_t*)inode_sector;
