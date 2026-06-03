@@ -96,28 +96,38 @@ void alifs_list() {
     for (int i = 0; i < MAX_FILES; i++) {
         if (!inodes[i].active) continue;
 
-        // Must start with current path
-        if (strncmp(inodes[i].filename, current_path, path_len) == 0) {
-            char* remainder = inodes[i].filename + path_len;
-            
-            // Logic: Is it a direct child?
-            // Root "/" -> remainder[0] is not '/', so children are just "file"
-            // Subdir "/dir" -> remainder[0] must be '/', remainder[1+] must NOT have '/'
-            if (strcmp(current_path, "/") == 0) {
-                if (remainder[0] != '/') { // Not a sub-path
-                    vga_write(inodes[i].is_dir ? "<DIR> " : "      ");
-                    vga_write(remainder); vga_write("\n");
-                    count++;
-                }
-            } else if (remainder[0] == '/' && strchr(remainder + 1, '/') == NULL) {
-                vga_write(inodes[i].is_dir ? "<DIR> " : "      ");
-                vga_write(remainder + 1); vga_write("\n");
-                count++;
+        // 1. Is this inode a direct child?
+        int is_child = 0;
+        char* remainder = NULL;
+
+        if (strcmp(current_path, "/") == 0) {
+            // If in root, any file without a '/' (except root itself) is a child
+            if (inodes[i].filename[0] == '/' && strchr(inodes[i].filename + 1, '/') == NULL) {
+                is_child = 1;
+                remainder = inodes[i].filename + 1;
+            }
+        } else {
+            // If in a sub-dir, match the prefix "/dir/"
+            if (strncmp(inodes[i].filename, current_path, path_len) == 0 &&
+                inodes[i].filename[path_len] == '/' &&
+                strchr(inodes[i].filename + path_len + 1, '/') == NULL) {
+                is_child = 1;
+                remainder = inodes[i].filename + path_len + 1;
             }
         }
+
+        if (is_child) {
+            vga_write(inodes[i].is_dir ? "<DIR> " : "      ");
+            vga_write(remainder); vga_write("\n");
+            count++;
+        }
     }
-    if (count == 0) vga_write("(Empty)\n");
+
+    if (count == 0) {
+        vga_write("(Empty)\n");
+    }
 }
+
 
 
 char* alifs_read(char* name) {
@@ -218,15 +228,18 @@ int alifs_delete_recursive(char* path) {
     for (int i = 0; i < MAX_FILES; i++) {
         if (!inodes[i].active) continue;
 
-        // Check if the current inode is the target OR a child of the target
-        // We check if it is an exact match OR if it starts with "path/"
+        // 1. Is it the exact folder we want to delete?
         int is_match = (strcmp(inodes[i].filename, path) == 0);
+        
+        // 2. Is it a file/dir inside this folder?
+        // We check if it starts with the path + '/'
         int is_child = (strncmp(inodes[i].filename, path, path_len) == 0 && 
                         inodes[i].filename[path_len] == '/');
 
+        // If it's either, mark for deletion
         if (is_match || is_child) {
             inodes[i].active = 0;
-            // Optionally clear filename for sanity
+            // Clear memory
             for(int j = 0; j < FILENAME_LEN; j++) inodes[i].filename[j] = 0;
             deleted_count++;
         }
@@ -238,7 +251,6 @@ int alifs_delete_recursive(char* path) {
     }
 
     ide_write_sector_bytes(ALIFS_START_LBA + 1, inode_sector);
-    vga_write("Deleted directory and all contents.\n");
+    vga_write("Deleted successfully.\n");
     return 0;
 }
-
