@@ -16,6 +16,20 @@ static uint8_t inode_sector[512] __attribute__((aligned(8)));
 // Static buffer for reading file content
 static char file_content_buffer[512] __attribute__((aligned(8)));
 
+char *strrchr(const char *str, int character) {
+    char *last = NULL;
+    while (*str != '\0') {
+        if (*str == (char)character) {
+            last = (char *)str;
+        }
+        str++;
+    }
+    if ((char)character == '\0') {
+        return (char *)str;
+    }
+    return last;
+}
+
 char *strchr(const char *str, int character) {
     while (*str != '\0') {
         if (*str == (char)character) {
