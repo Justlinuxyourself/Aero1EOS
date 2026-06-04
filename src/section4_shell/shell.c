@@ -2121,6 +2121,12 @@ void cmd_remv(char* args) {
     }
 }
 
+void cmd_pwd(char* args) {
+    (void)args; // Silence unused warning
+    vga_write(current_path);
+    vga_write("\n");
+}
+
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
     command_node_t* new_node = (command_node_t*)kmalloc(sizeof(command_node_t));
@@ -2198,6 +2204,7 @@ void shell_init() {
     shell_register_command("testposix", "TEST POSIX", run_full_posix_test);
     shell_register_command("max", "DUDUDUDUUUUU MAX VERSTAPPEN", ddddmvse);
     shell_register_command("remv", "REMOVE", cmd_remv);
+    shell_register_command("wrdi", "WoRking DIrectory", cmd_pwd);
 }
 
 void shell_dispatch(char* buffer) {
