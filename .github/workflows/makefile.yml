@@ -129,6 +129,15 @@ jobs:
                   "https://upload.wikimedia.org/wikipedia/commons/7/72/RSF484_departing_East_Midlands_Airport_%28altered%29.jpg",
                   "https://upload.wikimedia.org/wikipedia/commons/8/86/Saudi_Hawks_at_airpower_%28cropped%29.jpg",
                   "https://upload.wikimedia.org/wikipedia/commons/5/53/RSAF_KC-707_%28cropped%29.jpg",
+                  "https://upload.wikimedia.org/wikipedia/commons/c/c6/HZ-AR29_Boeing_787-10_Saudia_Arabian_Airlines_LHR_3.1.25.jpg",
+                  "https://upload.wikimedia.org/wikipedia/commons/d/d5/Saudia%2C_HZ-AS62%2C_Airbus_A320-214_%2847585097882%29.jpg",
+                  "https://upload.wikimedia.org/wikipedia/commons/5/5d/Saudia_%28Saudi_National_Day_Livery%29%2C_HZ-AQE%2C_Airbus_A330-343_%2844574961504%29.jpg",
+                  "https://upload.wikimedia.org/wikipedia/commons/d/d8/Saudia_%28Ad-Diriyah_E-Prix_Livery%29%2C_HZ-AK43%2C_Boeing_777-368_ER_%2849596796563%29.jpg",
+                  "https://upload.wikimedia.org/wikipedia/commons/1/1b/Saudi_Arabian_Airlines_Convair_340_Quackenbush.jpg",
+                  "https://upload.wikimedia.org/wikipedia/commons/c/cb/Saudi_Arabian_Airlines_L-1011-200_HZ-AHE_LHR_1985-5-17.png",
+                  "https://upload.wikimedia.org/wikipedia/commons/9/96/HZ-APF_%288016935735%29.jpg",
+                  "https://upload.wikimedia.org/wikipedia/commons/d/d7/Saudi_Arabian_Airlines_TF-AAD_%287857764738%29.jpg",
+                  "https://upload.wikimedia.org/wikipedia/commons/8/8a/Saudi_Arabian_Government_Boeing_747-468_HZ-HM1_at_JFK_Airport.jpg"
               ]
               
               # Set up content based on success/failure
