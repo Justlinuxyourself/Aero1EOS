@@ -49,60 +49,42 @@ jobs:
 
       - name: Generate Statistics
         id: stats
-        # Only run stats if the build actually worked
         if: success()
         run: |
-          # Compare the last commit to its parent
           BEFORE_SHA="HEAD~1"
           CURRENT_SHA="HEAD"
-
           echo '{"files": []}' > stats.json
-
-          # Filter for relevant source files
           FILES=$(git diff --name-only $BEFORE_SHA $CURRENT_SHA -- '*.c' '*.h' '*.asm' '*.s' 'Makefile' '*.md' '*.cfg' '*.yml' || echo "")
-          
           if [ ! -z "$FILES" ]; then
             for filename in $FILES; do
               if [ -f "$filename" ]; then
-                # Get raw numbers from git numstat
                 STATS=$(git diff --numstat $BEFORE_SHA $CURRENT_SHA -- "$filename")
                 RAW_ADDED=$(echo "$STATS" | awk '{print $1}' | grep -E '^[0-9]+$' || echo 0)
                 RAW_REMOVED=$(echo "$STATS" | awk '{print $2}' | grep -E '^[0-9]+$' || echo 0)
-
-                # Calculate "Changed" as the overlapping lines
-                if [ "$RAW_ADDED" -lt "$RAW_REMOVED" ]; then
-                  CHANGED=$RAW_ADDED
-                else
-                  CHANGED=$RAW_REMOVED
-                fi
-                
-                # The leftovers are pure additions or pure removals
+                if [ "$RAW_ADDED" -lt "$RAW_REMOVED" ]; then CHANGED=$RAW_ADDED; else CHANGED=$RAW_REMOVED; fi
                 PURE_ADDED=$((RAW_ADDED - CHANGED))
                 PURE_REMOVED=$((RAW_REMOVED - CHANGED))
-
-                jq --arg f "$filename" --arg a "$PURE_ADDED" --arg r "$PURE_REMOVED" --arg c "$CHANGED" \
-                '.files += [{"name": $f, "added": $a, "removed": $r, "changed": $c}]' stats.json > tmp.json && mv tmp.json stats.json
+                jq --arg f "$filename" --arg a "$PURE_ADDED" --arg r "$PURE_REMOVED" --arg c "$CHANGED" '.files += [{"name": $f, "added": $a, "removed": $r, "changed": $c}]' stats.json > tmp.json && mv tmp.json stats.json
               fi
             done
           fi
+
       - name: Update README with Commit Count
         if: always()
         run: |
           CURRENT_COUNT=$(git rev-list --count HEAD)
           TOTAL_COUNT=$((CURRENT_COUNT + 467))
-          
-          # Only update if the number inside the tags matches the new total
-          if grep -q "<!--COMMIT_COUNT-->$TOTAL_COUNT<!--/COMMIT_COUNT-->" README.md; then
+          if grep -q "$TOTAL_COUNT" README.md; then
             echo "Count is already up to date. Skipping."
           else
-            # Only replaces the number specifically between the tags
-            sed -i "s/<!--COMMIT_COUNT-->[0-9]*<!--\/COMMIT_COUNT-->/<!--COMMIT_COUNT-->$TOTAL_COUNT<!--\/COMMIT_COUNT-->/" README.md
+            sed -i "s/[0-9]*/$TOTAL_COUNT/" README.md
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add README.md
             git commit -m "docs: auto-update commit count to $TOTAL_COUNT [skip ci]"
             git push
           fi
+
       - name: Post Discord Report
         if: always()
         env:
@@ -111,71 +93,84 @@ jobs:
         run: |
           LATEST_MSG=$(git log -1 --pretty=%B)
           export COMMIT_MSG="$LATEST_MSG"
-
           python3 << 'EOF'
           import json
           import os
           import requests
           import random
+          from datetime import datetime
+          from zoneinfo import ZoneInfo, available_timezones
 
-          def send_report():
-              webhook_url = os.getenv('DISCORD_WEBHOOK')
-              commit_msg = os.getenv('COMMIT_MSG', 'Manual Sync/Update')
-              build_status = os.getenv('BUILD_STATUS', 'failure')
-              
-              # List of real-life aviation photo URLs
-              plane_images = [
-                  "https://upload.wikimedia.org/wikipedia/commons/6/64/RSAF_Typhoon_at_Malta_-_Gordon_Zammit.jpg",
-                  "https://upload.wikimedia.org/wikipedia/commons/7/72/RSF484_departing_East_Midlands_Airport_%28altered%29.jpg",
-                  "https://upload.wikimedia.org/wikipedia/commons/8/86/Saudi_Hawks_at_airpower_%28cropped%29.jpg",
-                  "https://upload.wikimedia.org/wikipedia/commons/5/53/RSAF_KC-707_%28cropped%29.jpg",
-                  "https://upload.wikimedia.org/wikipedia/commons/c/c6/HZ-AR29_Boeing_787-10_Saudia_Arabian_Airlines_LHR_3.1.25.jpg",
-                  "https://upload.wikimedia.org/wikipedia/commons/d/d5/Saudia%2C_HZ-AS62%2C_Airbus_A320-214_%2847585097882%29.jpg",
-                  "https://upload.wikimedia.org/wikipedia/commons/5/5d/Saudia_%28Saudi_National_Day_Livery%29%2C_HZ-AQE%2C_Airbus_A330-343_%2844574961504%29.jpg",
-                  "https://upload.wikimedia.org/wikipedia/commons/d/d8/Saudia_%28Ad-Diriyah_E-Prix_Livery%29%2C_HZ-AK43%2C_Boeing_777-368_ER_%2849596796563%29.jpg",
-                  "https://upload.wikimedia.org/wikipedia/commons/1/1b/Saudi_Arabian_Airlines_Convair_340_Quackenbush.jpg",
-                  "https://upload.wikimedia.org/wikipedia/commons/c/cb/Saudi_Arabian_Airlines_L-1011-200_HZ-AHE_LHR_1985-5-17.png",
-                  "https://upload.wikimedia.org/wikipedia/commons/9/96/HZ-APF_%288016935735%29.jpg",
-                  "https://upload.wikimedia.org/wikipedia/commons/d/d7/Saudi_Arabian_Airlines_TF-AAD_%287857764738%29.jpg",
-                  "https://upload.wikimedia.org/wikipedia/commons/8/8a/Saudi_Arabian_Government_Boeing_747-468_HZ-HM1_at_JFK_Airport.jpg"
-              ]
-              
-              # Set up content based on success/failure
-              if build_status == 'success':
-                  title = "Aero1EOS Build Successful! HELL YEA-🦅"
-                  color = 2326507 
-                  description = f"**Commit Details:**\n{commit_msg}\n\n"
-                  
-                  if os.path.exists('stats.json'):
-                      try:
-                          with open('stats.json', 'r') as f:
-                              data = json.load(f)
-                          if data.get('files'):
-                              for file in data['files']:
-                                  stats = []
-                                  if int(file['added']) > 0: stats.append(f"+{file['added']}")
-                                  if int(file['removed']) > 0: stats.append(f"-{file['removed']}")
-                                  if int(file['changed']) > 0: stats.append(f"~{file['changed']}")
-                                  stat_line = " | ".join(stats) if stats else "No changes"
-                                  description += f"**`{file['name']}`**\n`{stat_line}`\n"
-                      except:
-                          description += "_Stats generation failed._"
-              else:
-                  title = "Build Failed! ☹️☹️☹️ Ali is Suffering Right now"
-                  color = 15158332
-                  description = f"**Failed Commit:**\n{commit_msg}\n\nCheck the GitHub Actions tab to inspect the GCC/NASM compiler logs."
+          webhook_url = os.getenv('DISCORD_WEBHOOK')
+          commit_msg = os.getenv('COMMIT_MSG', 'Manual Sync/Update')
+          build_status = os.getenv('BUILD_STATUS', 'failure')
+          
+          # Birthday logic: check all available timezones
+          all_zones = sorted(list(available_timezones()))
+          birthday_zones = []
+          for tz_name in all_zones:
+              try:
+                  now_in_tz = datetime.now(ZoneInfo(tz_name))
+                  if now_in_tz.month == 2 and now_in_tz.day == 13:
+                      birthday_zones.append(tz_name)
+              except: continue
+          
+          if birthday_zones:
+              footer_text = f"HAPPY BIRTHDAY TO Aero1EOS! Active in: {', '.join(birthday_zones)}"
+          else:
+              now_utc = datetime.now(ZoneInfo("UTC"))
+              next_birthday = datetime(now_utc.year, 2, 13, tzinfo=ZoneInfo("UTC"))
+              if now_utc > next_birthday: next_birthday = datetime(now_utc.year + 1, 2, 13, tzinfo=ZoneInfo("UTC"))
+              days_left = (next_birthday - now_utc).days
+              footer_text = f"Days until OSes birthday: {days_left}"
 
-              payload = {
-                  "content": "<@&1503391410785882225>",
-                  "embeds": [{
-                      "title": title,
-                      "description": description,
-                      "color": color,
-                      "image": {"url": random.choice(plane_images)}
-                  }]
-              }
-              requests.post(webhook_url, json=payload)
+          plane_images = [
+              "https://upload.wikimedia.org/wikipedia/commons/6/64/RSAF_Typhoon_at_Malta_-_Gordon_Zammit.jpg",
+              "https://upload.wikimedia.org/wikipedia/commons/7/72/RSF484_departing_East_Midlands_Airport_%28altered%29.jpg",
+              "https://upload.wikimedia.org/wikipedia/commons/8/86/Saudi_Hawks_at_airpower_%28cropped%29.jpg",
+              "https://upload.wikimedia.org/wikipedia/commons/5/53/RSAF_KC-707_%28cropped%29.jpg",
+              "https://upload.wikimedia.org/wikipedia/commons/c/c6/HZ-AR29_Boeing_787-10_Saudia_Arabian_Airlines_LHR_3.1.25.jpg",
+              "https://upload.wikimedia.org/wikipedia/commons/d/d5/Saudia%2C_HZ-AS62%2C_Airbus_A320-214_%2847585097882%29.jpg",
+              "https://upload.wikimedia.org/wikipedia/commons/5/5d/Saudia_%28Saudi_National_Day_Livery%29%2C_HZ-AQE%2C_Airbus_A330-343_%2844574961504%29.jpg",
+              "https://upload.wikimedia.org/wikipedia/commons/d/d8/Saudia_%28Ad-Diriyah_E-Prix_Livery%29%2C_HZ-AK43%2C_Boeing_777-368_ER_%2849596796563%29.jpg",
+              "https://upload.wikimedia.org/wikipedia/commons/1/1b/Saudi_Arabian_Airlines_Convair_340_Quackenbush.jpg",
+              "https://upload.wikimedia.org/wikipedia/commons/c/cb/Saudi_Arabian_Airlines_L-1011-200_HZ-AHE_LHR_1985-5-17.png",
+              "https://upload.wikimedia.org/wikipedia/commons/9/96/HZ-APF_%288016935735%29.jpg",
+              "https://upload.wikimedia.org/wikipedia/commons/d/d7/Saudi_Arabian_Airlines_TF-AAD_%287857764738%29.jpg",
+              "https://upload.wikimedia.org/wikipedia/commons/8/8a/Saudi_Arabian_Government_Boeing_747-468_HZ-HM1_at_JFK_Airport.jpg"
+          ]
+          
+          if build_status == 'success':
+              title = "Aero1EOS Build Successful! HELL YEA-🦅"
+              color = 2326507 
+              description = f"**Commit Details:**\n{commit_msg}\n\n"
+              if os.path.exists('stats.json'):
+                  try:
+                      with open('stats.json', 'r') as f:
+                          data = json.load(f)
+                      if data.get('files'):
+                          for file in data['files']:
+                              stats = []
+                              if int(file['added']) > 0: stats.append(f"+{file['added']}")
+                              if int(file['removed']) > 0: stats.append(f"-{file['removed']}")
+                              if int(file['changed']) > 0: stats.append(f"~{file['changed']}")
+                              stat_line = " | ".join(stats) if stats else "No changes"
+                              description += f"**`{file['name']}`**\n`{stat_line}`\n"
+                  except: description += "_Stats generation failed._"
+          else:
+              title = "Build Failed! ☹️☹️☹️ Ali is Suffering Right now"
+              color = 15158332
+              description = f"**Failed Commit:**\n{commit_msg}\n\nCheck the GitHub Actions tab to inspect the GCC/NASM compiler logs."
 
-          if __name__ == "__main__":
-              send_report()
+          payload = {
+              "content": "<@&1503391410785882225>",
+              "embeds": [{
+                  "title": title,
+                  "description": description,
+                  "color": color,
+                  "footer": {"text": footer_text},
+                  "image": {"url": random.choice(plane_images)}
+              }]
+          }
+          requests.post(webhook_url, json=payload)
           EOF
