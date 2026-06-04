@@ -1312,24 +1312,43 @@ void cmd_ls(char* args) {
     // alifs_list() handles the disk reading and VGA printing internally
     alifs_list();
 }
+
 void cmd_cd(char* args) {
-    // If user types 'gtdi' with no args, or 'gtdi /', go back to root
+    // 1. Handle root return
     if (args == 0 || args[0] == '\0' || strcmp(args, "/") == 0) {
         strcpy(current_path, "/");
         vga_write("Returned to root.\n");
         return;
     }
 
-    // Logic for moving into a sub-directory
+    // 2. Handle '..' (Go up one level)
+    if (strcmp(args, "..") == 0) {
+        if (strcmp(current_path, "/") == 0) {
+            vga_write("Already at root.\n");
+            return;
+        }
+
+        // Find the last slash to trim the path
+        char* last_slash = strrchr(current_path, '/');
+        
+        if (last_slash == current_path) {
+            // We are at /folder, so go back to /
+            strcpy(current_path, "/");
+        } else {
+            // Trim path: "/a/b" becomes "/a"
+            *last_slash = '\0';
+        }
+        vga_write("Moved up to: "); vga_write(current_path); vga_write("\n");
+        return;
+    }
+
     if (alifs_is_directory(args)) {
         if (strcmp(current_path, "/") == 0) {
-            // If we are at root, the new path is just the folder name
             char temp[256];
             temp[0] = '/';
             strcpy(&temp[1], args);
             strcpy(current_path, temp);
         } else {
-            // Append the new folder: /old/new
             int len = strlen(current_path);
             current_path[len] = '/';
             strcpy(&current_path[len+1], args);
@@ -1338,6 +1357,7 @@ void cmd_cd(char* args) {
         vga_write("Error: Directory not found.\n");
     }
 }
+
 
 void cmd_mkdir(char* args) {
     char* dirname = get_filename_arg(args);
