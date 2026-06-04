@@ -1825,6 +1825,7 @@ void cmd_socials(char* args) {
     vga_write("  Roblox:    justlinuxyourself\n");
     vga_write("  Chess.com: alitheosdev\n");
     vga_write("  Email:     alithefukinglinuxlover@gmail.com\n");
+    vga_write("  Twitter/X: alitheAOSowner\n");
     vga_write("===============================================================\n\n");
 }
 void play_lullaby_sync() {
