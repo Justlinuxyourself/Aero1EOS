@@ -2058,7 +2058,7 @@ void run_full_posix_test() {
         vga_write("SUCCESS: AliFS file opened!\n");
         vga_write("fd_result: ");
         char buf[16];
-        vga_write(ltoa(fd_result, buf);
+        vga_write(ltoa(fd_result, buf));
         vga_write("\n");
     } else {
         vga_write("FAILURE: Could not open AliFS file.\n");
