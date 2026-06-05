@@ -23,10 +23,8 @@ isr_syscall:
     
     ; Pass pointer to registers_t struct to the C handler
     mov rdi, rsp           
-    call syscall_handler
-    
-    ; Pop registers in EXACT REVERSE order of the pushes
-    pop rax
+    mov rax, [rsp]
+
     pop rbx
     pop rcx
     pop rdx
@@ -41,6 +39,4 @@ isr_syscall:
     pop r14
     pop r15
     pop rbp
-    
-    ; Return using the hardware-pushed frame
     iretq
