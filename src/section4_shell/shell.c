@@ -34,6 +34,7 @@ extern char wait_for_key();
 extern void cmd_start_gui();
 extern int strncmp(const char* s1, const char* s2, int n);
 int alifs_is_directory(char* name);
+extern void print_to_tty(const char* str int tty_idx);
 // Simple PRNG state
 static uint32_t next_rand = 1;
 // kernel start and end
@@ -2179,6 +2180,41 @@ void shell_register_command(const char* name, const char* desc, command_func fun
     command_list = new_node;
 }
 
+void cmd_printto(char* args) {
+    if (!args || *args == '\0') {
+        vga_write("Usage: printto [tty] [message]\n");
+        return;
+    }
+
+    char* tty_str = args;
+    char* message = 0;
+
+    // Split the first space to separate TTY index from the message
+    for (int i = 0; args[i]; i++) {
+        if (args[i] == ' ') {
+            args[i] = '\0';
+            message = &args[i+1];
+            break;
+        }
+    }
+
+    if (!message || *message == '\0') {
+        vga_write("Error: Missing message.\n");
+        return;
+    }
+
+    // Convert string digit to integer
+    int target_tty = tty_str[0] - '0';
+
+    // Validate
+    if (target_tty < 0 || target_tty >= MAX_TTYS) {
+        vga_write("Error: Invalid TTY index.\n");
+        return;
+    }
+
+    // Call the print function
+    print_to_tty(message, target_tty);
+}
 
 void shell_init() {
     shell_register_command("help", "List all available commands", cmd_help);
@@ -2240,6 +2276,7 @@ void shell_init() {
     shell_register_command("max", "DUDUDUDUUUUU MAX VERSTAPPEN", ddddmvse);
     shell_register_command("remv", "REMOVE", cmd_remv);
     shell_register_command("wrdi", "WoRking DIrectory", cmd_pwd);
+    shell_register_command("printto", "Print to TTY", cmd_printto);
 }
 
 void shell_dispatch(char* buffer) {
