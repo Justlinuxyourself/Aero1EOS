@@ -52,6 +52,7 @@ extern uint64_t stack_top;
 extern void setup_tss(uint64_t kernel_stack);
 extern void load_tss();
 extern void patch_gdt_tss();
+extern void heap_init();
 bool ata_probe(uint16_t port);
 int strcmp_custom(char* s1, char* s2) {
     int i = 0;
@@ -293,6 +294,8 @@ void kernel_main() {
     patch_gdt_tss();
     log_verbose("TSS", "LOAD TSS...");
     load_tss();
+    log_verbose("HEAP", "INIT HEAP...");
+    init_heap();
     log_verbose("KRNL", "Kernel size is...");
     char size_buf[12];
     vga_write(itoa((int)(_kernel_end - _kernel_start), size_buf));
