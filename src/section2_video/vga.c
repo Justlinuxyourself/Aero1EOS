@@ -26,8 +26,12 @@ typedef struct {
     int cursor_pos;
     char command_buffer[80];
     int buffer_idx;
-    void (*background_task)(); // Pointer to task function
+    // New signature: accepts TTY index
+    void (*background_task)(int); 
+    // Add a flag to see if a task is "busy" or can be killed
+    int is_task_running; 
 } tty_t;
+
 
 tty_t ttys[MAX_TTYS];
 int current_tty = 0;
@@ -255,10 +259,9 @@ void vga_write(const char* data) {
 
 void run_background_tasks() {
     for (int i = 0; i < MAX_TTYS; i++) {
-        // Only run background tasks if this TTY is NOT the active one
-        if (i != current_tty && ttys[i].background_task != 0) {
-            ttys[i].background_task();
+        // Only run background tasks if they are registered and not currently active
+        if (i != current_tty && ttys[i].background_task != NULL) {
+            ttys[i].background_task(i);
         }
     }
 }
-
