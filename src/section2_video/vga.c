@@ -265,3 +265,16 @@ void run_background_tasks() {
         }
     }
 }
+
+void print_to_tty(const char* str, int tty_idx) {
+    
+    if (tty_idx < 0 || tty_idx >= MAX_TTYS) return;
+
+    int saved_stdout = kernel_stdout_tty;
+
+    kernel_stdout_tty = tty_idx;
+
+    vga_write(str);
+    vga_putchar('\n');
+    kernel_stdout_tty = saved_stdout;
+}
