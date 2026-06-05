@@ -19,7 +19,7 @@ extern int cmos_get_month();
 extern int cmos_get_sec();
 extern void update_hardware_cursor();
 int timezone_offset_seconds = 0; // The "Master" variable
-
+int kernel_stdout_tty = 0;
 // Independent TTY structure
 typedef struct {
     unsigned short* buffer;
@@ -221,7 +221,7 @@ void vga_set_color(unsigned char color) {
 }
 
 void vga_putchar(char c) {
-    tty_t* active = &ttys[current_tty];
+    tty_t* active = &ttys[kernel_stdout_tty];
     unsigned short* vga_hardware = (unsigned short*)VGA_ADDRESS;
 
     if (active->cursor_pos >= WIDTH * (HEIGHT - 1)) {
