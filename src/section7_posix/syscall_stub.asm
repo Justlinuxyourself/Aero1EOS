@@ -1,3 +1,4 @@
+extern syscall_handler
 global isr_syscall
 isr_syscall:
     ; 1. CPU has pushed: SS, RSP, RFLAGS, CS, RIP
