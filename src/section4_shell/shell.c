@@ -246,6 +246,36 @@ char* itohex(unsigned long value, char* str) {
     return str;
 }
 
+char* ltoa(long value, char* str) {
+    int i = 0;
+    int isNegative = 0;
+
+    if (value == 0) {
+        str[i++] = '0';
+        str[i] = '\0';
+        return str;
+    }
+
+    if (value < 0) {
+        isNegative = 1;
+        value = -value;
+    }
+
+    while (value != 0) {
+        int rem = value % 10;
+        str[i++] = rem + '0';
+        value = value / 10;
+    }
+
+    if (isNegative) {
+        str[i++] = '-';
+    }
+
+    str[i] = '\0';
+    reverse(str, i);
+    return str;
+}
+
 /* --- Built-in Commands --- */
 void cmd_help(char* args) {
     (void)args;
@@ -2026,6 +2056,10 @@ void run_full_posix_test() {
 
     if (fd_result >= 0) {
         vga_write("SUCCESS: AliFS file opened!\n");
+        vga_write("fd_result: ");
+        char buf[16];
+        vga_write(ltoa(fd_result, buf);
+        vga_write("\n");
     } else {
         vga_write("FAILURE: Could not open AliFS file.\n");
     }
