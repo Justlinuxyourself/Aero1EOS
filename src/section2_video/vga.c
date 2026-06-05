@@ -26,6 +26,7 @@ typedef struct {
     int cursor_pos;
     char command_buffer[80];
     int buffer_idx;
+    void (*background_task)(); // Pointer to task function
 } tty_t;
 
 tty_t ttys[MAX_TTYS];
@@ -251,3 +252,13 @@ void vga_write(const char* data) {
         vga_putchar(data[i]);
     }
 }
+
+void run_background_tasks() {
+    for (int i = 0; i < MAX_TTYS; i++) {
+        // Only run background tasks if this TTY is NOT the active one
+        if (i != current_tty && ttys[i].background_task != 0) {
+            ttys[i].background_task();
+        }
+    }
+}
+
