@@ -14,7 +14,7 @@
   Featuring a hardened security model, multi-terminal interface, and real-time hardware integration.
 </p>
 
-952---
+---
 > [!WARNING]
 > some features dont work on real hardware, and some are untested.
 
