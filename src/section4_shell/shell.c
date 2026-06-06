@@ -35,7 +35,7 @@ extern char wait_for_key();
 extern void cmd_start_gui();
 extern int strncmp(const char* s1, const char* s2, int n);
 int alifs_is_directory(char* name);
-extern void print_to_tty(const char* str int tty_idx);
+extern void print_to_tty(const char* str, int tty_idx);
 // Simple PRNG state
 static uint32_t next_rand = 1;
 // kernel start and end
