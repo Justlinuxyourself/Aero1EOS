@@ -85,8 +85,8 @@ jobs:
           
           # Use string splitting to isolate the content between tags
           # This ensures we ONLY change the number inside the markers
-          prefix = ""
-          suffix = ""
+          prefix = "<!--COMMIT_COUNT-->"
+          suffix = "<!--/COMMIT_COUNT-->"
           
           if prefix in content and suffix in content:
               parts = content.split(prefix)
