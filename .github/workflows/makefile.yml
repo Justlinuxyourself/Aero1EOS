@@ -74,16 +74,20 @@ jobs:
         run: |
           CURRENT_COUNT=$(git rev-list --count HEAD)
           TOTAL_COUNT=$((CURRENT_COUNT + 467))
-          if grep -q "$TOTAL_COUNT" README.md; then
-            echo "Count is already up to date. Skipping."
-          else
-            sed -i "s/[0-9]*/$TOTAL_COUNT/" README.md
+          # Use sed to target the content specifically between the comment tags
+          sed -i "s|.*|$TOTAL_COUNT|" README.md
+          
+          # Check if changes exist before committing to avoid empty commits
+          if [[ -n $(git status -s) ]]; then
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add README.md
             git commit -m "docs: auto-update commit count to $TOTAL_COUNT [skip ci]"
             git push
+          else
+            echo "No changes detected. Skipping commit."
           fi
+
 
       - name: Post Discord Report
         if: always()
