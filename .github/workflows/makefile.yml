@@ -1,4 +1,4 @@
-s(name: Aero1EOS Automatic Release
+name: Aero1EOS Automatic Release
 
 on:
   push:
