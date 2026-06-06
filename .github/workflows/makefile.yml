@@ -74,10 +74,12 @@ jobs:
         run: |
           CURRENT_COUNT=$(git rev-list --count HEAD)
           TOTAL_COUNT=$((CURRENT_COUNT + 467))
-          # Use sed to target the content specifically between the comment tags
-          sed -i "s|.*|$TOTAL_COUNT|" README.md
           
-          # Check if changes exist before committing to avoid empty commits
+          # Target ONLY the number between the tags using sed
+          # The regex searches for the tags and replaces everything inside them
+          sed -i "s|[0-9]*|$TOTAL_COUNT|" README.md
+          
+          # Only commit if the file actually changed
           if [[ -n $(git status -s) ]]; then
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -85,7 +87,7 @@ jobs:
             git commit -m "docs: auto-update commit count to $TOTAL_COUNT [skip ci]"
             git push
           else
-            echo "No changes detected. Skipping commit."
+            echo "No update needed."
           fi
 
 
