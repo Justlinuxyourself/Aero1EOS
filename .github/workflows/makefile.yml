@@ -71,24 +71,33 @@ jobs:
 
       - name: Update README with Commit Count
         if: always()
+        shell: python
         run: |
-          CURRENT_COUNT=$(git rev-list --count HEAD)
-          TOTAL_COUNT=$((CURRENT_COUNT + 467))
+          import os
           
-          # Target ONLY the number between the tags using sed
-          # The regex searches for the tags and replaces everything inside them
-          sed -i "s|[0-9]*|$TOTAL_COUNT|" README.md
+          # Get current git commit count
+          current_count = int(os.popen('git rev-list --count HEAD').read().strip())
+          total_count = current_count + 467
           
-          # Only commit if the file actually changed
-          if [[ -n $(git status -s) ]]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add README.md
-            git commit -m "docs: auto-update commit count to $TOTAL_COUNT [skip ci]"
-            git push
-          else
-            echo "No update needed."
-          fi
+          # Read the file
+          with open('README.md', 'r') as f:
+              content = f.read()
+          
+          # Use string splitting to isolate the content between tags
+          # This ensures we ONLY change the number inside the markers
+          prefix = ""
+          suffix = ""
+          
+          if prefix in content and suffix in content:
+              parts = content.split(prefix)
+              main_body = parts[1].split(suffix)
+              
+              # Reconstruct the file
+              new_content = parts[0] + prefix + str(total_count) + suffix + main_body[1]
+              
+              with open('README.md', 'w') as f:
+                  f.write(new_content)
+
 
 
       - name: Post Discord Report
