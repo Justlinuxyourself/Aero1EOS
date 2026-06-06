@@ -98,27 +98,6 @@ jobs:
               with open('README.md', 'w') as f:
                   f.write(new_content)
 
-      - name: Update README with Commit Count
-        if: always()
-        shell: python
-        run: |
-          import os
-          current_count = int(os.popen('git rev-list --count HEAD').read().strip())
-          total_count = current_count + 467
-          
-          with open('README.md', 'r') as f:
-              content = f.read()
-          
-          prefix = ""
-          suffix = ""
-          
-          if prefix in content and suffix in content:
-              parts = content.split(prefix)
-              main_body = parts[1].split(suffix)
-              new_content = parts[0] + prefix + str(total_count) + suffix + main_body[1]
-              with open('README.md', 'w') as f:
-                  f.write(new_content)
-
         # 3. Only commit if the file has changed
           status = os.popen('git status -s').read()
           if "README.md" in status:
@@ -129,7 +108,6 @@ jobs:
               os.system('git push')
           else:
               print("No changes to commit.")
-
 
 
       - name: Post Discord Report
