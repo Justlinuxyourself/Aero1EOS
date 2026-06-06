@@ -75,30 +75,26 @@ jobs:
         run: |
           import os
           
-          # Get current git commit count
+          # 1. Calculate count
           current_count = int(os.popen('git rev-list --count HEAD').read().strip())
           total_count = current_count + 467
           
-          # Read the file
+          # 2. Update the README file
           with open('README.md', 'r') as f:
               content = f.read()
           
-          # Use string splitting to isolate the content between tags
-          # This ensures we ONLY change the number inside the markers
           prefix = "<!--COMMIT_COUNT-->"
           suffix = "<!--/COMMIT_COUNT-->"
           
           if prefix in content and suffix in content:
               parts = content.split(prefix)
               main_body = parts[1].split(suffix)
-              
-              # Reconstruct the file
               new_content = parts[0] + prefix + str(total_count) + suffix + main_body[1]
               
               with open('README.md', 'w') as f:
                   f.write(new_content)
-
-        # 3. Only commit if the file has changed
+          
+          # 3. Handle Git commands from within Python to ensure they run
           status = os.popen('git status -s').read()
           if "README.md" in status:
               os.system('git config user.name "github-actions[bot]"')
@@ -107,8 +103,7 @@ jobs:
               os.system(f'git commit -m "docs: auto-update commit count to {total_count} [skip ci]"')
               os.system('git push')
           else:
-              print("No changes to commit.")
-
+              print("No changes to README detected.")
 
       - name: Post Discord Report
         if: always()
