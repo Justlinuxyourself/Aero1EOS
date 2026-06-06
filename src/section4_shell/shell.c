@@ -11,6 +11,7 @@ All rights reserved.
 #include <stdint.h>
 #define NOTEBOOK_YELLOW 0x1E
 #define VGA_ADDRESS 0xB8000
+#define MAX_TTYS 10
 volatile int is_sleeping = 0;
 static command_node_t* command_list = 0;
 extern unsigned int get_uptime_seconds();
