@@ -2164,6 +2164,20 @@ void cmd_pwd(char* args) {
     vga_write("\n");
 }
 
+void cmd_all_ascii() {
+    // Buffer for a single character string
+    char str[2] = {0, 0};
+    
+    // Total usable space = 24 rows * 80 columns = 1920 characters
+    for (int i = 0; i < 1920; i++) {
+        // Cycle through printable ASCII characters 33-126
+        str[0] = (char)((i % 94) + 33);
+        
+        // Print to the current TTY buffer
+        vga_write(str);
+    }
+}
+
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
     command_node_t* new_node = (command_node_t*)kmalloc(sizeof(command_node_t));
@@ -2278,6 +2292,7 @@ void shell_init() {
     shell_register_command("remv", "REMOVE", cmd_remv);
     shell_register_command("wrdi", "WoRking DIrectory", cmd_pwd);
     shell_register_command("printto", "Print to TTY", cmd_printto);
+    shell_register_command("ascii", "Show All ASCII chars", cmd_all_ascii);
 }
 
 void shell_dispatch(char* buffer) {
