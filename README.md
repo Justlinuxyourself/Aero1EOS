@@ -106,7 +106,9 @@ Aero1EOS 4.0 is open-source software licensed under the **MIT License**.
 
 ### Demo Assets
 **Bad Apple!! Animation:** Based on *Touhou Project*. These ASCII assets are community-driven and included solely for demonstrating the Aero1EOS 4 video driver performance.
-
+## Aero1EOS Communitys
+[Discord Server](https://discord.gg/26JRFCRpFV)
+[Sub Reddit](https://reddit.com/d/Aero1EOS)
 ## Bugs:
 - Beep stutters
 - pit timer runs at 200hz instead of 100hz for some reason
