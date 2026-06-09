@@ -1,4 +1,4 @@
-  /* 
+/* 
 Copyright (c) 2026 Ali  
 All rights reserved.
 */
@@ -2177,24 +2177,6 @@ void cmd_all_ascii() {
         vga_write(str);
     }
 }
-
-/* --- Shell Logic --- */
-void shell_register_command(const char* name, const char* desc, command_func func) {
-    command_node_t* new_node = (command_node_t*)kmalloc(sizeof(command_node_t));
-    
-    int i = 0;
-    while(name[i] && i < 31) { new_node->name[i] = name[i]; i++; }
-    new_node->name[i] = '\0';
-
-    i = 0;
-    while(desc[i] && i < 63) { new_node->description[i] = desc[i]; i++; }
-    new_node->description[i] = '\0';
-
-    new_node->function = func;
-    new_node->next = command_list;
-    command_list = new_node;
-}
-
 void cmd_printto(char* args) {
     if (!args || *args == '\0') {
         vga_write("Usage: printto [tty] [message]\n");
@@ -2229,6 +2211,23 @@ void cmd_printto(char* args) {
 
     // Call the print function
     print_to_tty(message, target_tty);
+}
+
+/* --- Shell Logic --- */
+void shell_register_command(const char* name, const char* desc, command_func func) {
+    command_node_t* new_node = (command_node_t*)kmalloc(sizeof(command_node_t));
+    
+    int i = 0;
+    while(name[i] && i < 31) { new_node->name[i] = name[i]; i++; }
+    new_node->name[i] = '\0';
+
+    i = 0;
+    while(desc[i] && i < 63) { new_node->description[i] = desc[i]; i++; }
+    new_node->description[i] = '\0';
+
+    new_node->function = func;
+    new_node->next = command_list;
+    command_list = new_node;
 }
 
 void shell_init() {
