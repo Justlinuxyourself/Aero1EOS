@@ -452,7 +452,7 @@ void twins() {
         "MIKAY (BATTERY EATER TWINIES)", "ALIYAH", "AYAH", "DANIEL", 
         "ASEEL (MY SIS)", "KHAILD", "AMAL (ASEELS BSF)", "FATMAH/FARAH (MY AUNT)", 
         "HEAIM", "BASMA & MALAK", "OSAMA & SHERIF (PEAKEST UNCLES 4EVER)", 
-        "MARCEL", "FERIBSD", "SUMY", "KYOO", "LEXUS", "RAYYAN", "CAIN", "ABEL", "<<OLIVIA>>", "EIAN", "REN", "SPECIAL: GaroDaemon"
+        "MARCEL", "FERIBSD", "SUMY", "KYOO", "LEXUS", "RAYYAN", "CAIN", "ABEL", "<<OLIVIA>>", "EIAN", "REN", "SWEET POTATO", "DEITY", "SPECIAL: GaroDaemon"
     };
 
     int total_names = sizeof(names) / sizeof(names[0]);
