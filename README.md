@@ -34,7 +34,7 @@ Aero1EOS 4 is a custom-built, 64-bit "Notebook" style operating system. It featu
 
 ### 1. Boot & Memory
 **Kernel Entry:** Written in Assembly (`boot.asm`), it builds a 4-level paging hierarchy: PML4 -> PDPT -> PDT.
-**Huge Pages:** Identity maps the first 10MB of RAM using 2MB "Huge Pages" to simplify the initial memory map.
+**Huge Pages:** Identity maps the first 64MB of RAM using 2MB "Huge Pages" to simplify the initial memory map.
 **Heap Manager:** A dynamic memory allocator starting after the kernel (`kernel_end`) to avoid overlapping kernel code when something is added.
 
 ### 2. Clock & Timing
