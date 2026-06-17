@@ -60,7 +60,7 @@ Aero1EOS 4 is a custom-built, 64-bit "Notebook" style operating system. It featu
 | `lock` | Manually triggers the hardened lock screen. |
 | `test` | Verifies timer calibration with a 5s countdown. |
 | `beep` | Plays a system alert sound through the PC Speaker. (has a bug, check **Bugs** section.)|
-| `twins` | Shows my twins names bc they are my lovely twins 🥹🥹🥹|
+| `twins` | Shows my twins names bc they are my peakest twins 🥹🥹🥹|
 | `sleep` | puts system in sleep until a key press |
 | `plane` | shows a art of a plane |
 | `about_dev` | About Developer |
@@ -70,7 +70,8 @@ Aero1EOS 4 is a custom-built, 64-bit "Notebook" style operating system. It featu
 | `tdadd` | adds todo to mem |
 | `tdshw` | shows todo from mem |
 | `calc` | Calculator |
--# many more with the `help` command 🥹
+
+many more with the `help` command 🥹🥹🥹
 
 ## 📁 Directory Structure
 ```text
