@@ -455,7 +455,7 @@ void twins() {
         "MARCEL", "FERIBSD", "SUMY", "KYOO", "LEXUS", "RAYYAN", "CAIN", 
         "ABEL", "<<OLIVIA>>", "EIAN", "REN", "SWEET POTATO", "DEITY", 
         "SPECIAL: GaroDaemon", "SPECIAL: ANTI-XV", "SPECIAL: Apple eater", 
-        "SPECIAL: Bricky (kindred)", "SPECIAL: Kris", "SPECIAL: Panzerkampfwagen VIII manus"
+        "SPECIAL: Bricky (kindred)", "SPECIAL: Kris", "SPECIAL: Panzerkampfwagen VIII manus", "SPECIAL 3x: IRIS"
     };
 
     int total_names = sizeof(names) / sizeof(names[0]);
@@ -2167,19 +2167,7 @@ void cmd_pwd(char* args) {
     vga_write("\n");
 }
 
-void cmd_all_ascii() {
-    // Buffer for a single character string
-    char str[2] = {0, 0};
-    
-    // Total usable space = 24 rows * 80 columns = 1920 characters
-    for (int i = 0; i < 1920; i++) {
-        // Cycle through printable ASCII characters 33-126
-        str[0] = (char)((i % 94) + 33);
-        
-        // Print to the current TTY buffer
-        vga_write(str);
-    }
-}
+
 void cmd_printto(char* args) {
     if (!args || *args == '\0') {
         vga_write("Usage: printto [tty] [message]\n");
@@ -2216,6 +2204,19 @@ void cmd_printto(char* args) {
     print_to_tty(message, target_tty);
 }
 
+void cmd_all_ascii() {
+    // Buffer for a single character string
+    char str[2] = {0, 0};
+    
+    // Total usable space = 24 rows * 80 columns = 1920 characters
+    for (int i = 0; i < 1920; i++) {
+        // Cycle through printable ASCII characters 33-126
+        str[0] = (char)((i % 94) + 33);
+        
+        // Print to the current TTY buffer
+        vga_write(str);
+    }
+}
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
     command_node_t* new_node = (command_node_t*)kmalloc(sizeof(command_node_t));
