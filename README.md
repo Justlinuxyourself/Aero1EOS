@@ -11,7 +11,7 @@
 
 <p align="center">
   <strong>A custom-built, 64-bit "Notebook" style operating system.</strong><br>
-  Featuring a hardened security model, multi-terminal interface, and real-time hardware integration.
+  Featuring a hardened security model, multi-terminal interface, and real-time hardware integration, All made by "علي يحي علي صميلي"
 </p>
 
 ---
