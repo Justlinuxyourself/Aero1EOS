@@ -7,6 +7,7 @@ All rights reserved.
 #include "../section1_cpu/io.h"
 #include "aliscr.h"
 #include "frames.h"
+#include "quran.h"
 #include "../section3_io/alifs.h"
 #include <stdint.h>
 #define NOTEBOOK_YELLOW 0x1E
@@ -2217,6 +2218,50 @@ void cmd_all_ascii() {
         vga_write(str);
     }
 }
+void cmd_get_ayah(char* args) {
+    if (args == 0 || args[0] == '\0') {
+        vga_write("Usage: getayah [surah] [ayah]\nExample: getayah 1 1\n");
+        return;
+    }
+
+    char* surah_str = args;
+    char* ayah_str = 0;
+
+    // Split the input at the space
+    for (int i = 0; args[i]; i++) {
+        if (args[i] == ' ') {
+            args[i] = '\0';
+            ayah_str = &args[i+1];
+            break;
+        }
+    }
+
+    if (!ayah_str) {
+        vga_write("Error: Please provide both Surah and Ayah numbers.\n");
+        return;
+    }
+
+    int target_surah = atoi_custom(surah_str);
+    int target_ayah = atoi_custom(ayah_str);
+
+    int found = 0;
+    int total_ayahs = sizeof(quran) / sizeof(Ayah);
+
+    for (int i = 0; i < total_ayahs; i++) {
+        if (quran[i].surah == target_surah && quran[i].ayah == target_ayah) {
+            vga_write("\n");
+            vga_write(quran[i].text);
+            vga_write("\n");
+            found = 1;
+            break;
+        }
+    }
+
+    if (!found) {
+        vga_write("Verse not found.\n");
+    }
+}
+
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
     command_node_t* new_node = (command_node_t*)kmalloc(sizeof(command_node_t));
@@ -2296,6 +2341,7 @@ void shell_init() {
     shell_register_command("wrdi", "WoRking DIrectory", cmd_pwd);
     shell_register_command("printto", "Print to TTY", cmd_printto);
     shell_register_command("ascii", "Show All ASCII chars", cmd_all_ascii);
+    shell_register_command("getayah", "Fetch a specific Quran verse", cmd_get_ayah);
 }
 
 void shell_dispatch(char* buffer) {
