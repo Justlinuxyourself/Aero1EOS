@@ -33,7 +33,6 @@ unsigned long long get_total_ram_bytes() {
     unsigned long long extended_kb = (high << 8) | low;
     return (1024 + extended_kb) * 1024;
 }
-/* Add these to your cmos.c */
 
 void write_cmos(unsigned char reg, unsigned char val) {
     outb(0x70, reg);
