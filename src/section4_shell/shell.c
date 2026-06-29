@@ -2337,10 +2337,10 @@ void shell_init() {
     shell_register_command("snake", "Play Snake game", cmd_snake);
     shell_register_command("testposix", "TEST POSIX", run_full_posix_test);
     shell_register_command("max", "DUDUDUDUUUUU MAX VERSTAPPEN", ddddmvse);
-    shell_register_command("remv", "REMOVE", cmd_remv);
-    shell_register_command("wrdi", "WoRking DIrectory", cmd_pwd);
-    shell_register_command("printto", "Print to TTY", cmd_printto);
-    shell_register_command("ascii", "Show All ASCII chars", cmd_all_ascii);
+    shell_register_command("remv", "REMOVE A FILE/DIRECTORY", cmd_remv);
+    shell_register_command("wrdi", "WoRking DIrectory (current directory)", cmd_pwd);
+    shell_register_command("printto", "Print to Another TTY", cmd_printto);
+    shell_register_command("ascii", "Show All printable ASCII chars", cmd_all_ascii);
     shell_register_command("getayah", "Fetch a specific Quran verse", cmd_get_ayah);
 }
 
