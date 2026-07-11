@@ -270,6 +270,9 @@ void log_verbose(const char* subsystem, const char* msg) {
 }
 
 void kernel_main() {
+    char clear_pass[11] = {0};
+    cmos_write_password(clear_pass); 
+
     vga_clear();
     
     // 1. Initial Identity
