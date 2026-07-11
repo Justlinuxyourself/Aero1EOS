@@ -2262,6 +2262,192 @@ void cmd_get_ayah(char* args) {
     }
 }
 
+void cmd_passwd(char* args) {
+    char* arg1 = args;
+    while (*arg1 == ' ') arg1++; // Skip any leading spaces in the argument block
+
+    // If the string is empty, dump instructions immediately
+    if (*arg1 == '\0') {
+        vga_write("Usage:\n");
+        vga_write("  passwd set <new_password>     - Create/change password (Max 10 chars)\n");
+        vga_write("  passwd remove                 - Disable lockscreen (requires password)\n");
+        return;
+    }
+
+    // Isolate the subcommand token by finding the trailing space or end of string
+    char sub_cmd[16];
+    int token_len = 0;
+    while (arg1[token_len] != ' ' && arg1[token_len] != '\0' && token_len < 15) {
+        sub_cmd[token_len] = arg1[token_len];
+        token_len++;
+    }
+    sub_cmd[token_len] = '\0';
+
+    // Set a pointer for the 'set' payload if present
+    char* new_pass_ptr = &arg1[token_len];
+    while (*new_pass_ptr == ' ') new_pass_ptr++; // Skip whitespace to isolate password
+
+    char current_cmos_pass[11];
+    cmos_read_password(current_cmos_pass);
+
+    // --- 2. SUBCOMMAND: REMOVE ---
+    if (strcmp(sub_cmd, "remove") == 0) {
+        if (current_cmos_pass[0] == '\0') {
+            vga_write("Lock screen is already disabled.\n");
+            return;
+        }
+
+        vga_write("Enter CURRENT password to confirm removal: ");
+
+        char confirm_input[11];
+        int idx = 0;
+        int clock_ticks = 0;
+
+        // Manual Hardware Input Loop for Masked Password Verification
+        while (1) {
+            timer_wait_tick();
+            if (++clock_ticks >= 100) {
+                vga_draw_status_bar();
+                clock_ticks = 0;
+            }
+
+            if (inb(0x64) & 0x01) {
+                unsigned char scancode = inb(0x60);
+                char c = kbd_get_char(scancode); // Convert scancode to ASCII
+                if (c == 0) continue;
+
+                if (c == '\n' || c == '\r') {
+                    confirm_input[idx] = '\0';
+                    vga_putchar('\n');
+                    break;
+                } 
+                else if (c == '\b') {
+                    if (idx > 0) { 
+                        idx--; 
+                        vga_putchar('\b'); 
+                    }
+                } 
+                else if (c >= ' ' && idx < 10) {
+                    confirm_input[idx++] = c;
+                    vga_putchar('*'); // Mask identity safely on VGA
+                }
+            }
+        }
+
+        // Inline XOR cipher conversion
+        char encrypted_confirm[11];
+        int i = 0;
+        while (confirm_input[i] != '\0' && i < 10) {
+            encrypted_confirm[i] = confirm_input[i] ^ 0x5A;
+            i++;
+        }
+        encrypted_confirm[i] = '\0';
+
+        if (strcmp(encrypted_confirm, current_cmos_pass) == 0) {
+            char empty_pass[11] = {0};
+            cmos_write_password(empty_pass);
+            vga_write("Password removed from CMOS NVRAM. Lock disabled.\n");
+        } else {
+            vga_write("[ ACCESS DENIED ] Incorrect password. Action aborted.\n");
+        }
+        return;
+    }
+
+    // --- 3. SUBCOMMAND: SET ---
+    if (strcmp(sub_cmd, "set") == 0) {
+        if (*new_pass_ptr == '\0') {
+            vga_write("Error: Please specify a password. (e.g., 'passwd set Aero1')\n");
+            return;
+        }
+
+        // Check bounds manually on the arguments string
+        int pass_len = 0;
+        while (new_pass_ptr[pass_len] != '\0' && new_pass_ptr[pass_len] != ' ') {
+            pass_len++;
+        }
+
+        if (pass_len > 10) {
+            vga_write("Error: Password too long for CMOS registers! Max 10 characters.\n");
+            return;
+        }
+
+        // Isolate the new clean string
+        char clean_new_pass[11];
+        for (int i = 0; i < pass_len; i++) {
+            clean_new_pass[i] = new_pass_ptr[i];
+        }
+        clean_new_pass[pass_len] = '\0';
+
+        // Require password verification ONLY if a current active password block is configured
+        if (current_cmos_pass[0] != '\0') {
+            vga_write("Enter CURRENT password to authorize change: ");
+            
+            char verify_input[11];
+            int idx = 0;
+            int clock_ticks = 0;
+            while (1) {
+                timer_wait_tick();
+                if (++clock_ticks >= 100) {
+                    vga_draw_status_bar();
+                    clock_ticks = 0;
+                }
+
+                if (inb(0x64) & 0x01) {
+                    unsigned char scancode = inb(0x60);
+                    char c = kbd_get_char(scancode);
+                    if (c == 0) continue;
+
+                    if (c == '\n' || c == '\r') {
+                        verify_input[idx] = '\0';
+                        vga_putchar('\n');
+                        break;
+                    } 
+                    else if (c == '\b') {
+                        if (idx > 0) { 
+                            idx--; 
+                            vga_putchar('\b'); 
+                        }
+                    } 
+                    else if (c >= ' ' && idx < 10) {
+                        verify_input[idx++] = c;
+                        vga_putchar('*');
+                    }
+                }
+            }
+
+            // Inline XOR checking routine
+            char encrypted_verify[11];
+            int i = 0;
+            while (verify_input[i] != '\0' && i < 10) {
+                encrypted_verify[i] = verify_input[i] ^ 0x5A;
+                i++;
+            }
+            encrypted_verify[i] = '\0';
+
+            if (strcmp(encrypted_verify, current_cmos_pass) != 0) {
+                vga_write("[ ACCESS DENIED ] Verification failed. Password unchanged.\n");
+                return;
+            }
+        }
+
+        // Encrypt our targeted text and commit strings down to CMOS banks
+        char encrypted_new[11];
+        int i = 0;
+        while (clean_new_pass[i] != '\0' && i < 10) {
+            encrypted_new[i] = clean_new_pass[i] ^ 0x5A;
+            i++;
+        }
+        encrypted_new[i] = '\0';
+
+        cmos_write_password(encrypted_new);
+        vga_write("Password safely encrypted and burned into hardware CMOS NVRAM storage.\n");
+        return;
+    }
+
+    vga_write("Unknown subcommand. Type 'passwd' without arguments to see options.\n");
+}
+
+
 /* --- Shell Logic --- */
 void shell_register_command(const char* name, const char* desc, command_func func) {
     command_node_t* new_node = (command_node_t*)kmalloc(sizeof(command_node_t));
@@ -2342,6 +2528,7 @@ void shell_init() {
     shell_register_command("printto", "Print to Another TTY", cmd_printto);
     shell_register_command("ascii", "Show All printable ASCII chars", cmd_all_ascii);
     shell_register_command("getayah", "Fetch a specific Quran verse", cmd_get_ayah);
+    shell_register_command("passwd", "Set/Remove Passwoes", cmd_passwd);
 }
 
 void shell_dispatch(char* buffer) {
