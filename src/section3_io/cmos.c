@@ -47,3 +47,20 @@ void set_failed_attempts(unsigned char count) {
 unsigned char get_failed_attempts() {
     return read_cmos(0x34);
 }
+
+// Store the encrypted password string starting at CMOS register 0x35 (Max 10 chars + null)
+void cmos_write_password(const char* encrypted_pass) {
+    for (int i = 0; i < 11; i++) {
+        write_cmos(0x35 + i, encrypted_pass[i]);
+        if (encrypted_pass[i] == '\0') break;
+    }
+}
+
+// Read the encrypted password string directly from CMOS register 0x35
+void cmos_read_password(char* dest_buffer) {
+    for (int i = 0; i < 11; i++) {
+        dest_buffer[i] = read_cmos(0x35 + i);
+        if (dest_buffer[i] == '\0') break;
+    }
+    dest_buffer[10] = '\0'; // Safety boundary guard
+}
