@@ -134,12 +134,13 @@ void bootup_screen() {
 void lock_system_hardened() {
     char live_secret[11];
     cmos_read_password(live_secret);
+    set_failed_attempts(0);
 
     // If the first register is completely blank (0x00), skip the lock screen entirely
     if (live_secret[0] == '\0') {
         return;
     }
-
+    while (inb(0x64) & 0x01) { inb(0x60); }
     char input[11]; 
     char encrypted_input[11];
     int idx = 0;
