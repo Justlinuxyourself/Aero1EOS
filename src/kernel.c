@@ -56,6 +56,8 @@ extern void heap_init();
 bool ata_probe(uint16_t port);
 extern void cmos_write_password(const char* encrypted_pass); 
 extern void cmos_read_password(char* dest_buffer); 
+#define CMOS_INIT_FLAG_REG  0x32  // Flag
+#define CMOS_MAGIC_VAL      0xA5  // A distinct byte to signal "Initialized"
 int strcmp_custom(char* s1, char* s2) {
     int i = 0;
     while (s1[i] != '\0' || s2[i] != '\0') {
@@ -271,9 +273,14 @@ void log_verbose(const char* subsystem, const char* msg) {
 }
 
 void kernel_main() {
-    char clear_pass[11] = {0};
-    cmos_write_password(clear_pass); 
-
+    if (cmos_read(CMOS_INIT_FLAG_REG) != CMOS_MAGIC_VAL) {
+        // CMOS contains garbage! Clean it up once.
+        char clear_pass[11] = {0};
+        cmos_write_password(clear_pass);
+        
+        // Mark it as initialized so it never wipes again
+        cmos_write(CMOS_INIT_FLAG_REG, CMOS_MAGIC_VAL);
+    }
     vga_clear();
     
     // 1. Initial Identity
