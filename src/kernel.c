@@ -186,7 +186,7 @@ void lock_system_hardened() {
                     // Re-read active CMOS password state right before checking
                     cmos_read_password(live_secret);
 
-                    if (strcmp(encrypted_input, live_secret) == 0) {
+                    if (strcmp_custom(encrypted_input, live_secret) == 1) {
                         set_failed_attempts(0); 
                         vga_clear();
                         return; 
