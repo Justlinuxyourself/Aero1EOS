@@ -136,7 +136,7 @@ void bootup_screen() {
 }
 
 void lock_system_hardened() {
-    char live_secret[11];
+    char live_secret[11] = {0}; 
     cmos_read_password(live_secret);
     set_failed_attempts(0);
 
@@ -145,8 +145,9 @@ void lock_system_hardened() {
         return;
     }
     while (inb(0x64) & 0x01) { inb(0x60); }
-    char input[11]; 
-    char encrypted_input[11];
+    
+    char input[11] = {0};           
+    char encrypted_input[11] = {0}; 
     int idx = 0;
     int strikes = get_failed_attempts(); 
     int clock_ticks = 0;
@@ -179,7 +180,7 @@ void lock_system_hardened() {
                 if (c == '\n') {
                     input[idx] = '\0';
 
-                    // XOR cipher loop built right in line
+                    // In-line XOR cipher execution
                     int i = 0;
                     while (input[i] != '\0' && i < 10) {
                         encrypted_input[i] = input[i] ^ 0x5A;
@@ -201,6 +202,12 @@ void lock_system_hardened() {
                         char s_buf[4];
                         vga_write(itoa(strikes, s_buf));
                         vga_write("/3\n");
+                        
+                        // Zero out sensitive plaintext/ciphertext buffers immediately on failure
+                        for(int k = 0; k < 11; k++) {
+                            input[k] = 0;
+                            encrypted_input[k] = 0;
+                        }
                         idx = 0;
                         break; 
                     }
@@ -208,7 +215,7 @@ void lock_system_hardened() {
                 else if (c == '\b') {
                     if (idx > 0) { idx--; vga_putchar('\b'); }
                 } 
-                else if (c >= ' ' && idx < 10) { // Limit to 10 characters maximum
+                else if (c >= ' ' && idx < 10) { 
                     input[idx++] = c;
                     vga_putchar('*'); 
                 }
@@ -216,6 +223,8 @@ void lock_system_hardened() {
         }
     }
 }
+
+
 
 
 void todo_init() {
