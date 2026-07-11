@@ -275,13 +275,13 @@ void log_verbose(const char* subsystem, const char* msg) {
 }
 
 void kernel_main() {
-    if (cmos_read(CMOS_INIT_FLAG_REG) != CMOS_MAGIC_VAL) {
+    if (read_cmos(CMOS_INIT_FLAG_REG) != CMOS_MAGIC_VAL) {
         // CMOS contains garbage! Clean it up once.
         char clear_pass[11] = {0};
         cmos_write_password(clear_pass);
         
         // Mark it as initialized so it never wipes again
-        cmos_write(CMOS_INIT_FLAG_REG, CMOS_MAGIC_VAL);
+        write_cmos(CMOS_INIT_FLAG_REG, CMOS_MAGIC_VAL);
     }
     vga_clear();
     
