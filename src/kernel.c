@@ -54,6 +54,8 @@ extern void load_tss();
 extern void patch_gdt_tss();
 extern void heap_init();
 bool ata_probe(uint16_t port);
+extern void cmos_write_password(const char* encrypted_pass); 
+extern void cmos_read_password(char* dest_buffer); 
 int strcmp_custom(char* s1, char* s2) {
     int i = 0;
     while (s1[i] != '\0' || s2[i] != '\0') {
@@ -130,8 +132,16 @@ void bootup_screen() {
 }
 
 void lock_system_hardened() {
-    char* secret = "Ali123";
-    char input[32];
+    char live_secret[11];
+    cmos_read_password(live_secret);
+
+    // If the first register is completely blank (0x00), skip the lock screen entirely
+    if (live_secret[0] == '\0') {
+        return;
+    }
+
+    char input[11]; 
+    char encrypted_input[11];
     int idx = 0;
     int strikes = get_failed_attempts(); 
     int clock_ticks = 0;
@@ -140,18 +150,15 @@ void lock_system_hardened() {
 
     while (1) {
         if (strikes >= 3) {
-    vga_clear();
-    vga_write("!!! SECURITY BREACH DETECTED !!!\n");
-    vga_write("System has been permanently locked.\n");
-    vga_write("Contact your administrator.");
-
-    // This function never returns, so the CPU stays here forever.
-    permanent_lockout_siren(); 
-}
+            vga_clear();
+            vga_write("!!! SECURITY BREACH DETECTED !!!\n");
+            vga_write("System has been permanently locked.\n");
+            permanent_lockout_siren(); 
+        }
+        
         vga_write("          Enter Password: ");
 
         while (1) {
-            // SYNC: Keep the clock moving while user types password
             timer_wait_tick();
             clock_ticks++;
             if (clock_ticks >= 100) {
@@ -166,7 +173,19 @@ void lock_system_hardened() {
 
                 if (c == '\n') {
                     input[idx] = '\0';
-                    if (strcmp_custom(input, secret)) {
+
+                    // XOR cipher loop built right in line
+                    int i = 0;
+                    while (input[i] != '\0' && i < 10) {
+                        encrypted_input[i] = input[i] ^ 0x5A;
+                        i++;
+                    }
+                    encrypted_input[i] = '\0';
+
+                    // Re-read active CMOS password state right before checking
+                    cmos_read_password(live_secret);
+
+                    if (strcmp(encrypted_input, live_secret) == 0) {
                         set_failed_attempts(0); 
                         vga_clear();
                         return; 
@@ -184,7 +203,7 @@ void lock_system_hardened() {
                 else if (c == '\b') {
                     if (idx > 0) { idx--; vga_putchar('\b'); }
                 } 
-                else if (c >= ' ' && idx < 31) {
+                else if (c >= ' ' && idx < 10) { // Limit to 10 characters maximum
                     input[idx++] = c;
                     vga_putchar('*'); 
                 }
@@ -192,6 +211,8 @@ void lock_system_hardened() {
         }
     }
 }
+
+
 void todo_init() {
     for(int i = 0; i < 10; i++) {
         my_list[i].active = 0;
