@@ -58,6 +58,8 @@ extern void cmos_write_password(const char* encrypted_pass);
 extern void cmos_read_password(char* dest_buffer); 
 #define CMOS_INIT_FLAG_REG  0x32  // Flag
 #define CMOS_MAGIC_VAL      0xA5  // A distinct byte to signal "Initialized"
+extern unsigned char read_cmos(unsigned char reg);
+extern void write_cmos(unsigned char reg, unsigned char val);
 int strcmp_custom(char* s1, char* s2) {
     int i = 0;
     while (s1[i] != '\0' || s2[i] != '\0') {
