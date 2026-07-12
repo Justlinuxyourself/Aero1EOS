@@ -8,6 +8,7 @@ All rights reserved.
 
 #define CMOS_ADDRESS 0x70
 #define CMOS_DATA    0x71
+#define PASSWORD_CMOS_BASE 0x40 
 
 unsigned char read_cmos(unsigned char reg) {
     outb(CMOS_ADDRESS, reg);
@@ -48,19 +49,20 @@ unsigned char get_failed_attempts() {
     return read_cmos(0x34);
 }
 
-// Store the encrypted password string starting at CMOS register 0x35 (Max 10 chars + null)
+
+
+
 void cmos_write_password(const char* encrypted_pass) {
     for (int i = 0; i < 11; i++) {
-        write_cmos(0x35 + i, encrypted_pass[i]);
+        write_cmos(PASSWORD_CMOS_BASE + i, encrypted_pass[i]);
         if (encrypted_pass[i] == '\0') break;
     }
 }
 
-// Read the encrypted password string directly from CMOS register 0x35
 void cmos_read_password(char* dest_buffer) {
     for (int i = 0; i < 11; i++) {
-        dest_buffer[i] = read_cmos(0x35 + i);
+        dest_buffer[i] = read_cmos(PASSWORD_CMOS_BASE + i);
         if (dest_buffer[i] == '\0') break;
     }
-    dest_buffer[10] = '\0'; // Safety boundary guard
+    dest_buffer[10] = '\0';
 }
