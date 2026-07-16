@@ -2469,7 +2469,7 @@ void shell_init() {
     shell_register_command("help", "List all available commands", cmd_help);
     shell_register_command("cls",  "Clear the notebook screen",   cmd_cls);
     shell_register_command("echo", "Print text to the screen",    cmd_echo);
-    shell_register_command("neofetch", "Display dynamic system info", cmd_neofetch);
+    shell_register_command("sysinfo", "Display dynamic system info", cmd_neofetch);
     shell_register_command("uptime", "Show how long Aero1EOS has been running", cmd_uptime);
     shell_register_command("free", "Check dynamic RAM usage", cmd_free);
     shell_register_command("timezone", "Adjust the status bar clock offset", shell_cmd_timezone);
