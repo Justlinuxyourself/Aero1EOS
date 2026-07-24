@@ -5,7 +5,7 @@ typedef unsigned char  uint8_t;
 typedef unsigned short uint16_t;
 typedef unsigned int   uint32_t;
 
-/* --- Externs from your Drivers --- */
+/* --- Externs --- */
 extern void vga_write(const char* data);
 extern void vga_putchar(char c);
 extern void vga_set_color(unsigned char color);

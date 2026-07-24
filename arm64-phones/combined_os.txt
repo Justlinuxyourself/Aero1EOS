@@ -1,0 +1,1134 @@
+/* === FILE: ./a16build.sh === */
+#!/bin/sh
+
+# Exit immediately if any command fails
+set -e
+
+# Toolchain Definitions
+CC="aarch64-linux-gnu-gcc"
+LD="aarch64-linux-gnu-ld"
+OBJCOPY="aarch64-linux-gnu-objcopy"
+
+# Compilation & Linker Flags
+CFLAGS="-Wall -O2 -ffreestanding -nostdlib -nostartfiles -fno-stack-protector -fno-builtin"
+LDFLAGS="-T linker-a16.ld -nostdlib"
+
+echo "=== Cleaning old build artifacts ==="
+rm -f *.o *.elf kernel8.img boot.img
+
+echo "=== Compiling Source Files ==="
+
+echo "Assembling entry.S..."
+$CC $CFLAGS -c entry.S -o entry.o
+
+# Compile C Files
+echo "Compiling kernel.c..."
+$CC $CFLAGS -c kernel.c -o kernel.o
+
+echo "Compiling framebuffer-a16.c..."
+$CC $CFLAGS -c framebuffer-a16.c -o framebuffer-a16.o
+
+echo "Compiling font.c..."
+$CC $CFLAGS -c font.c -o font.o
+
+echo "Compiling shell.c..."
+$CC $CFLAGS -c shell.c -o shell.o
+
+
+echo "=== Linking Kernel Object Files ==="
+$LD $LDFLAGS entry.o kernel.o framebuffer-a16.o font.o shell.o -o kernel8.elf
+
+echo "=== Generating Raw Binary Flat Image ==="
+$OBJCOPY -O binary kernel8.elf kernel8.img
+
+echo "=== Build Successful! kernel8.img is ready ==="
+
+echo "=== Packaging Raw Boot Image with mkbootimg ==="
+
+# Validation checks for assets
+if [ ! -f "dtba16" ]; then
+    echo "⚠️ ERROR: Missing 'dtba16' file in this directory!"
+    echo "Please extract the stock DTB from your A165FXXS9CZCA firmware and place it here."
+    exit 1
+fi
+
+# Create a blank/dummy ramdisk because modern Android boot headers require the field populated
+if [ ! -f "dummy_ramdisk.cpio" ]; then
+    echo "Creating empty dummy ramdisk..."
+    touch empty_file
+    echo empty_file | cpio -o -H newc > dummy_ramdisk.cpio
+    rm empty_file
+fi
+
+echo "Building Android boot image..." 
+    mkbootimg \
+    --kernel kernel8.img \
+    --ramdisk dummy_ramdisk.cpio \
+    --dtb dtba16 \
+    --base 0x40000000 \
+    --kernel_offset 0x00008000 \
+    --ramdisk_offset 0x02000000 \
+    --tags_offset 0x00000100 \
+    --dtb_offset 0x07800000 \
+    --pagesize 2048 \
+    --header_version 2 \
+    --cmdline "console=tty0 boot_devices=bootdevice,11200000.msdc0 permissive=1" \
+    -o boot.img
+
+echo "=== SUCCESS: Raw bare-metal boot.img is ready for Galaxy A16! ==="
+echo "=== DTB is from A165FXXS9CZCA ==="
+
+
+/* === FILE: ./framebuffer-4x.c === */
+#include <stdint.h>
+
+#define SCREEN_WIDTH  720
+#define SCREEN_HEIGHT 1280
+
+// Base physical pointer mapped via the Qualcomm MDSS display memory layer on MSM8940
+static uint32_t* fb = (uint32_t*)0x9D400000; 
+
+extern unsigned char font_bitmap[128][8];
+
+static int cursor_x = 0;
+static int cursor_y = 0;
+
+// Converts an incoming standard RGBA hex code safely over to the device's native BGRA channel layout
+static inline uint32_t convert_rgba_to_bgra(uint32_t rgba) {
+    uint8_t r = (rgba >> 24) & 0xFF;
+    uint8_t g = (rgba >> 16) & 0xFF;
+    uint8_t b = (rgba >> 8)  & 0xFF;
+    uint8_t a = rgba         & 0xFF;
+    
+    // Package into 0xAARRGGBB format layout expected by legacy Snapdragon panel configurations
+    return (a << 24) | (r << 16) | (g << 8) | b;
+}
+
+void fb_draw_pixel(int x, int y, uint32_t color) {
+    if (x >= 0 && x < SCREEN_WIDTH && y >= 0 && y < SCREEN_HEIGHT) {
+        fb[y * SCREEN_WIDTH + x] = convert_rgba_to_bgra(color);
+    }
+}
+
+void fb_clear(uint32_t color) {
+    uint32_t bgra_color = convert_rgba_to_bgra(color);
+    for (int i = 0; i < SCREEN_WIDTH * SCREEN_HEIGHT; i++) {
+        fb[i] = bgra_color;
+    }
+    cursor_x = 0;
+    cursor_y = 0;
+}
+
+void fb_putchar(char c, uint32_t fg, uint32_t bg) {
+    if (c == '\n') {
+        cursor_x = 0;
+        cursor_y += 10; // Shift down for next line boundary
+        return;
+    }
+    if (c == '\r') {
+        cursor_x = 0;
+        return;
+    }
+
+    // Clip screen boundaries safely
+    if (cursor_x + 8 > SCREEN_WIDTH) {
+        cursor_x = 0;
+        cursor_y += 10;
+    }
+    if (cursor_y + 8 > SCREEN_HEIGHT) {
+        fb_clear(bg); // Reset screen view clear if space runs out
+    }
+
+    if (c < 0 || c > 127) return;
+
+    for (int row = 0; row < 8; row++) {
+        uint8_t bits = font_bitmap[(int)c][row];
+        for (int col = 0; col < 8; col++) {
+            if (bits & (0x80 >> col)) {
+                fb_draw_pixel(cursor_x + col, cursor_y + row, fg);
+            } else {
+                fb_draw_pixel(cursor_x + col, cursor_y + row, bg);
+            }
+        }
+    }
+    cursor_x += 8;
+}
+
+void fb_puts(const char* str, uint32_t fg, uint32_t bg) {
+    while (*str) {
+        fb_putchar(*str++, fg, bg);
+    }
+}
+
+
+/* === FILE: ./linker-4x.ld === */
+ENTRY(_start)
+
+SECTIONS
+{
+    /* Common entry point address offset passed by Android boot image specs */
+    . = 0x80008000;
+
+    .text : {
+        KEEP(*(.text.boot))
+        *(.text .text.*)
+    }
+
+    .rodata : {
+        *(.rodata .rodata.*)
+    }
+
+    .data : {
+        *(.data .data.*)
+    }
+
+    .bss : ALIGN(16) {
+        __bss_start = .;
+        *(.bss .bss.*)
+        *(COMMON)
+        __bss_end = .;
+        __bss_end = .;
+    }
+
+    _kernel_end = .;
+}
+
+
+
+/* === FILE: ./entry.S === */
+.section ".text.boot"
+.global _start
+
+_start:
+    // Safe guard: Read core multi-processor affinity register
+    mrs     x0, mpidr_el1
+    and     x0, x0, #0xFF        // Isolate Core ID (Affinity 0)
+    cbz     x0, primary_core     // If 0, execute kernel_main
+
+secondary_core_hold:
+    wfe
+    b       secondary_core_hold
+
+primary_core:
+    // Mask out system interrupts
+    msr     daifset, #0xf
+
+    // Initialize .bss boundaries to clean memory state
+    ldr     x0, =__bss_start
+    ldr     x1, =__bss_end
+    sub     x1, x1, x0
+    cbz     x1, init_stack
+
+clear_bss:
+    str     xzr, [x0], #8
+    subs    x1, x1, #8
+    b.gt    clear_bss
+
+init_stack:
+    // Anchor the top of the stack frame within the safe memory space
+    ldr     x0, =_kernel_end
+    add     x0, x0, #0x40000     // Allocate 256KB for safe workspace runtime
+    mov     sp, x0
+
+    // Direct jump into operating system kernel entry point
+    bl      kernel_main
+
+kernel_panic_halt:
+    wfe
+    b       kernel_panic_halt
+
+
+
+/* === FILE: ./linker-a16.ld === */
+ENTRY(_start)
+
+SECTIONS
+{
+    /* Common entry point address offset passed by Android boot image specs */
+    . = 0x4008000;
+
+    .text : {
+        KEEP(*(.text.boot))
+        *(.text .text.*)
+    }
+
+    .rodata : {
+        *(.rodata .rodata.*)
+    }
+
+    .data : {
+        *(.data .data.*)
+    }
+
+    .bss : ALIGN(16) {
+        __bss_start = .;
+        *(.bss .bss.*)
+        *(COMMON)
+        __bss_end = .;
+        __bss_end = .;
+    }
+
+    _kernel_end = .;
+}
+
+
+
+/* === FILE: ./font.c === */
+#include <stdint.h>
+
+unsigned char font_bitmap[128][8] = {
+
+    [0 ... 31] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+
+  
+    [' ']  = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+    ['!']  = {0x18, 0x18, 0x18, 0x18, 0x00, 0x00, 0x18, 0x00},
+    ['"']  = {0x66, 0x66, 0x66, 0x00, 0x00, 0x00, 0x00, 0x00},
+    ['#']  = {0x24, 0x24, 0x7E, 0x24, 0x7E, 0x24, 0x24, 0x00},
+    ['$']  = {0x18, 0x3E, 0x60, 0x3C, 0x06, 0x7C, 0x18, 0x00},
+    ['%']  = {0x62, 0x66, 0x0C, 0x18, 0x30, 0x66, 0x46, 0x00},
+    ['&']  = {0x38, 0x6C, 0x6C, 0x38, 0x6E, 0x6C, 0x3A, 0x00},
+    ['\''] = {0x18, 0x18, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00},
+    ['(']  = {0x0C, 0x18, 0x30, 0x30, 0x30, 0x18, 0x0C, 0x00},
+    [')']  = {0x30, 0x18, 0x0C, 0x0C, 0x0C, 0x18, 0x30, 0x00},
+    ['*']  = {0x00, 0x14, 0x08, 0x3E, 0x08, 0x14, 0x00, 0x00},
+    ['+']  = {0x00, 0x08, 0x08, 0x3E, 0x08, 0x08, 0x00, 0x00},
+    [',']  = {0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x18, 0x30},
+    ['-']  = {0x00, 0x00, 0x00, 0x3E, 0x00, 0x00, 0x00, 0x00},
+    ['.']  = {0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x18, 0x00},
+    ['/']  = {0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x00},
+
+  
+    ['0']  = {0x3C, 0x66, 0x6E, 0x76, 0x66, 0x66, 0x3C, 0x00},
+    ['1']  = {0x18, 0x38, 0x18, 0x18, 0x18, 0x18, 0x7E, 0x00},
+    ['2']  = {0x3C, 0x66, 0x06, 0x1C, 0x30, 0x62, 0x7E, 0x00},
+    ['3']  = {0x3C, 0x66, 0x06, 0x1C, 0x06, 0x66, 0x3C, 0x00},
+    ['4']  = {0x0C, 0x1C, 0x2C, 0x4C, 0x7E, 0x0C, 0x0C, 0x00},
+    ['5']  = {0x7E, 0x60, 0x7C, 0x06, 0x06, 0x66, 0x3C, 0x00},
+    ['6']  = {0x3C, 0x60, 0x7C, 0x66, 0x66, 0x66, 0x3C, 0x00},
+    ['7']  = {0x7E, 0x66, 0x0C, 0x18, 0x30, 0x30, 0x30, 0x00},
+    ['8']  = {0x3C, 0x66, 0x66, 0x3C, 0x66, 0x66, 0x3C, 0x00},
+    ['9']  = {0x3C, 0x66, 0x66, 0x3E, 0x06, 0x0C, 0x38, 0x00},
+
+
+    [':']  = {0x00, 0x00, 0x18, 0x18, 0x00, 0x18, 0x18, 0x00},
+    [';']  = {0x00, 0x00, 0x18, 0x18, 0x00, 0x18, 0x18, 0x30},
+    ['<']  = {0x18, 0x30, 0x60, 0x40, 0x60, 0x30, 0x18, 0x00},
+    ['=']  = {0x00, 0x00, 0x3E, 0x00, 0x3E, 0x00, 0x00, 0x00},
+    ['>']  = {0x18, 0x0C, 0x06, 0x03, 0x06, 0x0C, 0x18, 0x00},
+    ['?']  = {0x3C, 0x66, 0x06, 0x0C, 0x18, 0x00, 0x18, 0x00},
+    ['@']  = {0x3C, 0x66, 0x6E, 0x6E, 0x60, 0x62, 0x3C, 0x00},
+
+  
+    ['A']  = {0x18, 0x3C, 0x66, 0x7E, 0x66, 0x66, 0x66, 0x00},
+    ['B']  = {0x7C, 0x66, 0x66, 0x7C, 0x66, 0x66, 0x7C, 0x00},
+    ['C']  = {0x3C, 0x66, 0x60, 0x60, 0x60, 0x66, 0x3C, 0x00},
+    ['D']  = {0x78, 0x6C, 0x66, 0x66, 0x66, 0x6C, 0x78, 0x00},
+    ['E']  = {0x7E, 0x60, 0x60, 0x7C, 0x60, 0x60, 0x7E, 0x00},
+    ['F']  = {0x7E, 0x60, 0x60, 0x7C, 0x60, 0x60, 0x60, 0x00},
+    ['G']  = {0x3C, 0x66, 0x60, 0x6E, 0x66, 0x66, 0x3E, 0x00},
+    ['H']  = {0x66, 0x66, 0x66, 0x7E, 0x66, 0x66, 0x66, 0x00},
+    ['I']  = {0x7E, 0x18, 0x18, 0x18, 0x18, 0x18, 0x7E, 0x00},
+    ['J']  = {0x3E, 0x0C, 0x0C, 0x0C, 0x0C, 0x6C, 0x38, 0x00},
+    ['K']  = {0x66, 0x6C, 0x78, 0x70, 0x78, 0x6C, 0x66, 0x00},
+    ['L']  = {0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x7E, 0x00},
+    ['M']  = {0x63, 0x77, 0x7F, 0x6B, 0x63, 0x63, 0x63, 0x00},
+    ['N']  = {0x66, 0x76, 0x7E, 0x7E, 0x6E, 0x66, 0x66, 0x00},
+    ['O']  = {0x3C, 0x66, 0x66, 0x66, 0x66, 0x66, 0x3C, 0x00},
+    ['P']  = {0x7C, 0x66, 0x66, 0x7C, 0x60, 0x60, 0x60, 0x00},
+    ['Q']  = {0x3C, 0x66, 0x66, 0x66, 0x6E, 0x6C, 0x3A, 0x00},
+    ['R']  = {0x7C, 0x66, 0x66, 0x7C, 0x6C, 0x66, 0x66, 0x00},
+    ['S']  = {0x3C, 0x66, 0x30, 0x18, 0x0C, 0x66, 0x3C, 0x00},
+    ['T']  = {0x7E, 0x5A, 0x18, 0x18, 0x18, 0x18, 0x18, 0x00},
+    ['U']  = {0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x3C, 0x00},
+    ['V']  = {0x66, 0x66, 0x66, 0x66, 0x66, 0x3C, 0x18, 0x00},
+    ['W']  = {0x63, 0x63, 0x63, 0x6B, 0x7F, 0x77, 0x63, 0x00},
+    ['X']  = {0x66, 0x66, 0x3C, 0x18, 0x3C, 0x66, 0x66, 0x00},
+    ['Y']  = {0x66, 0x66, 0x66, 0x3C, 0x18, 0x18, 0x18, 0x00},
+    ['Z']  = {0x7E, 0x06, 0x0C, 0x18, 0x30, 0x60, 0x7E, 0x00},
+
+
+    ['[']  = {0x3C, 0x30, 0x30, 0x30, 0x30, 0x30, 0x3C, 0x00},
+    ['\\'] = {0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x00},
+    [']']  = {0x3C, 0x0C, 0x0C, 0x0C, 0x0C, 0x0C, 0x3C, 0x00},
+    ['^']  = {0x18, 0x3C, 0x66, 0x00, 0x00, 0x00, 0x00, 0x00},
+    ['_']  = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF},
+    ['`']  = {0x30, 0x30, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00},
+
+  
+    ['a']  = {0x00, 0x00, 0x3C, 0x06, 0x3E, 0x66, 0x3F, 0x00},
+    ['b']  = {0x60, 0x60, 0x7C, 0x66, 0x66, 0x66, 0x7C, 0x00},
+    ['c']  = {0x00, 0x00, 0x3C, 0x60, 0x60, 0x66, 0x3C, 0x00},
+    ['d']  = {0x06, 0x06, 0x3E, 0x66, 0x66, 0x66, 0x3E, 0x00},
+    ['e']  = {0x00, 0x00, 0x3C, 0x66, 0x7E, 0x60, 0x3C, 0x00},
+    ['f']  = {0x1C, 0x30, 0x78, 0x30, 0x30, 0x30, 0x30, 0x00},
+    ['g']  = {0x00, 0x00, 0x3E, 0x66, 0x66, 0x3E, 0x06, 0x3C},
+    ['h']  = {0x60, 0x60, 0x7C, 0x66, 0x66, 0x66, 0x66, 0x00},
+    ['i']  = {0x08, 0x00, 0x18, 0x08, 0x08, 0x08, 0x1C, 0x00},
+    ['j']  = {0x0C, 0x00, 0x1C, 0x0C, 0x0C, 0x0C, 0x0C, 0x38},
+    ['k']  = {0x60, 0x60, 0x66, 0x6C, 0x78, 0x6C, 0x66, 0x00},
+    ['l']  = {0x18, 0x08, 0x08, 0x08, 0x08, 0x08, 0x1C, 0x00},
+    ['m']  = {0x00, 0x00, 0x6A, 0x7F, 0x55, 0x55, 0x55, 0x00},
+    ['n']  = {0x00, 0x00, 0x7C, 0x66, 0x66, 0x66, 0x66, 0x00},
+    ['o']  = {0x00, 0x00, 0x3C, 0x66, 0x66, 0x66, 0x3C, 0x00},
+    ['p']  = {0x00, 0x00, 0x7C, 0x66, 0x66, 0x7C, 0x60, 0x60},
+    ['q']  = {0x00, 0x00, 0x3E, 0x66, 0x66, 0x3E, 0x06, 0x06},
+    ['r']  = {0x00, 0x00, 0x2C, 0x32, 0x20, 0x20, 0x20, 0x00},
+    ['s']  = {0x00, 0x00, 0x1E, 0x20, 0x1C, 0x02, 0x3C, 0x00},
+    ['t']  = {0x08, 0x08, 0x3E, 0x08, 0x08, 0x0A, 0x04, 0x00},
+    ['u']  = {0x00, 0x00, 0x66, 0x66, 0x66, 0x66, 0x3E, 0x00},
+    ['v']  = {0x00, 0x00, 0x66, 0x66, 0x66, 0x3C, 0x18, 0x00},
+    ['w']  = {0x00, 0x00, 0x55, 0x55, 0x55, 0x7F, 0x22, 0x00},
+    ['x']  = {0x00, 0x00, 0x66, 0x3C, 0x18, 0x3C, 0x66, 0x00},
+    ['y']  = {0x00, 0x00, 0x66, 0x66, 0x66, 0x3E, 0x06, 0x3C},
+    ['z']  = {0x00, 0x00, 0x7E, 0x0C, 0x18, 0x30, 0x7E, 0x00},
+
+
+    ['{']  = {0x0C, 0x18, 0x18, 0x30, 0x18, 0x18, 0x0C, 0x00},
+    ['|']  = {0x18, 0x18, 0x18, 0x00, 0x18, 0x18, 0x18, 0x00},
+    ['}']  = {0x30, 0x18, 0x18, 0x0C, 0x18, 0x18, 0x30, 0x00},
+    ['~']  = {0x3B, 0x6E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+    
+
+    [127]  = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+};
+
+
+/* === FILE: ./kernel.c === */
+#include <stdint.h>
+
+extern void fb_clear(uint32_t color);
+extern void fb_puts(const char* str, uint32_t fg, uint32_t bg);
+extern void shell_init(void);
+extern void shell_handle_keypress(char key);
+
+// Custom delaying loop utility function to emulate typing paces
+void sleep_ticks(volatile int count) {
+    while(count--) {
+        asm volatile("nop");
+    }
+}
+
+void kernel_main() {
+    fb_clear(0x000033); // Set background canvas color
+
+    fb_puts("Aero1EOS Core Operating System Boot Sequence\n", 0x00FF00, 0x000033);
+    fb_puts("Loading Core Modules... Done.\n", 0xFFFFFF, 0x000033);
+    fb_puts("Aero1EOS > ", 0xFFFF00, 0x000033);
+
+    shell_init();
+
+    // Simulated Execution Run: Let's automatically test out your new shell configurations!
+    sleep_ticks(20000000);
+    shell_handle_keypress('h');
+    sleep_ticks(5000000);
+    shell_handle_keypress('e');
+    sleep_ticks(5000000);
+    shell_handle_keypress('l');
+    sleep_ticks(5000000);
+    shell_handle_keypress('p');
+    sleep_ticks(10000000);
+    shell_handle_keypress('\n'); // Submit "help" command string
+
+    // Run custom text retrieval checks automatically
+    sleep_ticks(20000000);
+    shell_handle_keypress('p');
+    shell_handle_keypress('l');
+    shell_handle_keypress('a');
+    shell_handle_keypress('n');
+    shell_handle_keypress('e');
+    shell_handle_keypress('\n');
+
+    // Idle state loop holding system execution safely
+    while (1) {
+        asm volatile("wfi");
+    }
+}
+
+
+
+/* === FILE: ./framebuffer-a16.c === */
+#include <stdint.h>
+
+#define SCREEN_WIDTH  1080
+#define SCREEN_HEIGHT 2340
+
+// Base physical pointer provided by the display hardware frame layer
+static uint32_t* fb = (uint32_t*)0x7E600000; 
+
+extern unsigned char font_bitmap[128][8];
+
+static int cursor_x = 0;
+static int cursor_y = 0;
+
+void fb_draw_pixel(int x, int y, uint32_t color) {
+    if (x >= 0 && x < SCREEN_WIDTH && y >= 0 && y < SCREEN_HEIGHT) {
+        fb[y * SCREEN_WIDTH + x] = color;
+    }
+}
+
+void fb_clear(uint32_t color) {
+    for (int i = 0; i < SCREEN_WIDTH * SCREEN_HEIGHT; i++) {
+        fb[i] = color;
+    }
+    cursor_x = 0;
+    cursor_y = 0;
+}
+
+void fb_putchar(char c, uint32_t fg, uint32_t bg) {
+    if (c == '\n') {
+        cursor_x = 0;
+        cursor_y += 10; // Shift down for next line boundary
+        return;
+    }
+    if (c == '\r') {
+        cursor_x = 0;
+        return;
+    }
+
+    // Clip screen boundaries safely
+    if (cursor_x + 8 > SCREEN_WIDTH) {
+        cursor_x = 0;
+        cursor_y += 10;
+    }
+    if (cursor_y + 8 > SCREEN_HEIGHT) {
+        fb_clear(bg); // Reset screen view clear if space runs out
+    }
+
+    if (c < 0 || c > 127) return;
+
+    for (int row = 0; row < 8; row++) {
+        uint8_t bits = font_bitmap[(int)c][row];
+        for (int col = 0; col < 8; col++) {
+            if (bits & (0x80 >> col)) {
+                fb_draw_pixel(cursor_x + col, cursor_y + row, fg);
+            } else {
+                fb_draw_pixel(cursor_x + col, cursor_y + row, bg);
+            }
+        }
+    }
+    cursor_x += 8;
+}
+
+void fb_puts(const char* str, uint32_t fg, uint32_t bg) {
+    while (*str) {
+        fb_putchar(*str++, fg, bg);
+    }
+}
+
+
+
+/* === FILE: ./4xbuild.sh === */
+#!/bin/sh
+
+set -e
+
+CC="arm-linux-gnueabihf-gcc"
+LD="arm-linux-gnueabihf-ld"
+OBJCOPY="arm-linux-gnueabihf-objcopy"
+
+# Compilation & Linker Flags
+CFLAGS="-Wall -O2 -ffreestanding -nostdlib -nostartfiles -fno-stack-protector -fno-builtin"
+LDFLAGS="-T linker-4x.ld -nostdlib"
+
+echo "=== Cleaning old build artifacts ==="
+rm -f *.o *.elf kernel8.img boot.img
+
+echo "=== Compiling Source Files ==="
+
+echo "Assembling entry.S..."
+$CC $CFLAGS -c entry-4x.S -o entry-4x.o
+
+# Compile C Files
+echo "Compiling kernel.c..."
+$CC $CFLAGS -c kernel.c -o kernel.o
+
+echo "Compiling framebuffer-4x.c..."
+$CC $CFLAGS -c framebuffer-4x.c -o framebuffer-4x.o
+
+echo "Compiling font.c..."
+$CC $CFLAGS -c font.c -o font.o
+
+echo "Compiling shell.c..."
+$CC $CFLAGS -c shell.c -o shell.o
+
+
+echo "=== Linking Kernel Object Files ==="
+$LD $LDFLAGS entry-4x.o kernel.o framebuffer-4x.o font.o shell.o -o kernel8.elf
+
+echo "=== Generating Raw Binary Flat Image ==="
+$OBJCOPY -O binary kernel8.elf kernel8.img
+
+echo "=== Build Successful! kernel8.img is ready ==="
+
+echo "=== Packaging Raw Boot Image with mkbootimg ==="
+
+# Validation checks for assets
+if [ ! -f "dtb4x" ]; then
+    echo "⚠️ ERROR: Missing 'dtb4x' file in this directory!"
+    echo "Please extract the stock DTB from your Redmi firmware and place it here."
+    exit 1
+fi
+
+# Create a blank/dummy ramdisk because modern Android boot headers require the field populated
+if [ ! -f "dummy_ramdisk.cpio" ]; then
+    echo "Creating empty dummy ramdisk..."
+    touch empty_file
+    echo empty_file | cpio -o -H newc > dummy_ramdisk.cpio
+    rm empty_file
+fi
+
+echo "Building Android boot image..." 
+
+    mkbootimg \
+    --kernel kernel8.img \
+    --ramdisk dummy_ramdisk.cpio \
+    --dtb dtb4x \
+    --base 0x80000000 \
+    --kernel_offset 0x00008000 \
+    --ramdisk_offset 0x02000000 \
+    --tags_offset 0x00000100 \
+    --dtb_offset 0x01e00000 \
+    --pagesize 2048 \
+    --header_version 2 \
+    --cmdline "console=ttyMSM0,115200n8 earlycon=msm_hsl_serial,0x78af000 androidboot.selinux=permissive" \
+    -o boot.img
+
+
+echo "=== SUCCESS: Raw bare-metal boot.img is ready for Redmi 4X! ==="
+echo "=== DTB is from  ==="
+
+
+/* === FILE: ./shell.c === */
+/* 
+Copyright (c) 2026 Ali  
+All rights reserved.
+*/
+
+#include <stdint.h>
+
+// Color configurations targeting a high-contrast theme (White/Yellow on Dark Blue)
+#define COLOR_WHITE   0xFFFFFFFF  // Full White
+#define COLOR_YELLOW  0xFFFFFF00  // Red + Green = Yellow
+#define COLOR_RED     0xFFFF0000  // Pure Red
+#define COLOR_GREEN   0xFF00FF00  // Pure Green
+#define COLOR_BG      0xFF000033  // Very dark, solid navy blue background (or change Alpha if you want it transparent)
+
+// External declarations from your phone port environment
+extern void fb_puts(const char* str, uint32_t fg, uint32_t bg);
+extern void fb_clear(uint32_t color);
+
+// Local function declarations
+int strcmp(const char* s1, const char* s2);
+int strncmp(const char* s1, const char* s2, int n);
+int strlen(const char* s);
+void strcpy(char* dest, const char* src);
+void reverse(char* str, int length);
+char* itoa(int value, char* str);
+int atoi_custom(char* str);
+
+/* --- Built-in Command Definitions --- */
+
+void cmd_help() {
+    fb_puts("\nAero1EOS Phone Commands:\n", COLOR_YELLOW, COLOR_BG);
+    fb_puts("help      - List all available commands\n", COLOR_WHITE, COLOR_BG);
+    fb_puts("cls       - Clear the screen\n", COLOR_WHITE, COLOR_BG);
+    fb_puts("echo      - Repeat text back to screen\n", COLOR_WHITE, COLOR_BG);
+    fb_puts("neofetch  - Display dynamic mobile architecture metadata\n", COLOR_WHITE, COLOR_BG);
+    fb_puts("about_dev - About the Developer\n", COLOR_WHITE, COLOR_BG);
+    fb_puts("twins     - Show the Legends list\n", COLOR_WHITE, COLOR_BG);
+    fb_puts("lullaby   - Display synchronization note status\n", COLOR_WHITE, COLOR_BG);
+    fb_puts("plane     - Display system custom aviation art\n", COLOR_WHITE, COLOR_BG);
+}
+
+void cmd_cls() {
+    fb_clear(COLOR_BG);
+}
+
+void cmd_echo(char* args) {
+    if (args && *args != '\0') {
+        fb_puts(args, COLOR_WHITE, COLOR_BG);
+        fb_puts("\n", COLOR_WHITE, COLOR_BG);
+    }
+}
+
+void cmd_neofetch() {
+    fb_puts("   ______      Aero1EOS 4.0 (Phone Edition)\n", COLOR_YELLOW, COLOR_BG);
+    fb_puts("  / ____/      ---------------------------\n", COLOR_YELLOW, COLOR_BG);
+    fb_puts(" / /  __       ARCH: AArch64 (ARMv8-A)\n", COLOR_WHITE, COLOR_BG);
+    fb_puts("/ /__/ /       TARGET: Samsung A12\n", COLOR_WHITE, COLOR_BG);
+    fb_puts("\\____ /        MODE: 64-bit Kernel Execution Context\n", COLOR_WHITE, COLOR_BG);
+}
+
+void cmd_about_dev() {
+    fb_puts("Hi my name is ali, i am 12 years old, and i like anything that has engines :3\n", COLOR_WHITE, COLOR_BG);
+}
+
+void draw_custom_plane() {
+    fb_puts("            __\\/__\n", COLOR_WHITE, COLOR_BG);
+    fb_puts("           `==/\\==` \n", COLOR_WHITE, COLOR_BG);
+    fb_puts(" ____________/__\\____________\n", COLOR_WHITE, COLOR_BG);
+    fb_puts("/____________________________\\\n", COLOR_WHITE, COLOR_BG);
+    fb_puts("  __||__||__/.--.\\__||__||__\n", COLOR_WHITE, COLOR_BG);
+    fb_puts(" /__|___|___( >< )___|___|__\\\n", COLOR_WHITE, COLOR_BG);
+    fb_puts("           _/`--`\\_\n", COLOR_WHITE, COLOR_BG);
+    fb_puts("          (/------\\)\n", COLOR_WHITE, COLOR_BG);
+}
+
+void twins() {
+    fb_puts("\n--- THE TWINS & LEGENDS ---\n", COLOR_YELLOW, COLOR_BG);
+    
+    const char* names[] = {
+        "APHRODITE", "SAKI (BEST SUNDAY GOONER)", "QOQO", "KEI", "LWAH", 
+        "O1", "O2", "RAYA THE KARAOKE QUEEN", "SEL", "ISHI", "ZAZA", 
+        "VANILLA & MAX", "SUSTUBE", "ADNAN", "ZIKE (FAF)", "MOLY", 
+        "ROSIE", "E", "Sillycat", "Kaisi", "ZANNNNNNNN", "ABDUALLAH", 
+        "MIKAY (BATTERY EATER TWINIES)", "ALIYAH", "AYAH", "DANIEL", 
+        "ASEEL (MY SIS)", "KHAILD", "AMAL (ASEELS BSF)", "FATMAH/FARAH (MY AUNT)", 
+        "HEAIM", "BASMA & MALAK", "OSAMA & SHERIF (PEAKEST UNCLES 4EVER)", 
+        "MARCEL", "FERIBSD", "SUMY", "KYOO", "LEXUS", "RAYYAN", "CAIN", 
+        "ABEL", "<<OLIVIA>>", "EIAN", "REN", "SWEET POTATO", "DEITY", 
+        "SPECIAL: GaroDaemon", "SPECIAL: ANTI-XV", "SPECIAL: Apple eater", 
+        "SPECIAL: Bricky (kindred)", "SPECIAL: Kris", "SPECIAL: Panzerkampfwagen VIII manus", "SPECIAL 3x: IRIS"
+    };
+
+    int total_names = sizeof(names) / sizeof(names[0]);
+
+    for (int i = 0; i < total_names; i++) {
+        fb_puts(names[i], COLOR_WHITE, COLOR_BG);
+        if (i < total_names - 1) {
+            fb_puts(" ||| ", COLOR_YELLOW, COLOR_BG);
+        }
+    }
+    fb_puts("\n---------------------------\n", COLOR_YELLOW, COLOR_BG);
+}
+
+void play_lullaby_sync() {
+    fb_puts("[Lullaby Sequence for Baby Sis rendering strings directly to Framebuffer...]\n", COLOR_WHITE, COLOR_BG);
+    fb_puts("♪ Twinkle, twinkle, little star... ♪\n", COLOR_YELLOW, COLOR_BG);
+}
+
+/* --- String Helpers --- */
+
+int strcmp(const char* s1, const char* s2) {
+    while (*s1 && (*s1 == *s2)) { s1++; s2++; }
+    return *(unsigned char*)s1 - *(unsigned char*)s2;
+}
+
+int strncmp(const char* s1, const char* s2, int n) {
+    while (n--) {
+        if (*s1 != *s2++) return *(unsigned char*)s1 - *(unsigned char*)--s2;
+        if (*s1++ == 0) break;
+    }
+    return 0;
+}
+
+int strlen(const char* s) {
+    int len = 0;
+    while (s[len]) len++;
+    return len;
+}
+
+void strcpy(char* dest, const char* src) {
+    int i = 0;
+    while (src[i] != '\0') {
+        dest[i] = src[i];
+        i++;
+    }
+    dest[i] = '\0';
+}
+
+void reverse(char* str, int length) {
+    int start = 0;
+    int end = length - 1;
+    while (start < end) {
+        char temp = str[start];
+        str[start] = str[end];
+        str[end] = temp;
+        start++;
+        end--;
+    }
+}
+
+char* itoa(int value, char* str) {
+    int i = 0;
+    int isNegative = 0;
+
+    if (value == 0) {
+        str[i++] = '0';
+        str[i] = '\0';
+        return str;
+    }
+
+    if (value < 0) {
+        isNegative = 1;
+        value = -value;
+    }
+
+    while (value != 0) {
+        int rem = value % 10;
+        str[i++] = rem + '0';
+        value = value / 10;
+    }
+
+    if (isNegative) {
+        str[i++] = '-';
+    }
+
+    str[i] = '\0';
+    reverse(str, i);
+    return str;
+}
+
+int atoi_custom(char* str) {
+    int res = 0;
+    int sign = 1;
+    int i = 0;
+
+    if (str[0] == '-') {
+        sign = -1;
+        i++;
+    } else if (str[0] == '+') {
+        i++;
+    }
+
+    for (; str[i] != '\0'; ++i) {
+        if (str[i] < '0' || str[i] > '9') break;
+        res = res * 10 + str[i] - '0';
+    }
+    return sign * res;
+}
+
+/* --- Core Shell Command Dispatcher --- */
+
+void shell_dispatch(char* buffer) {
+    // Check for an empty entry input
+    if (strlen(buffer) == 0) {
+        fb_puts("\nAero1EOS / > ", COLOR_YELLOW, COLOR_BG);
+        return;
+    }
+
+    // Isolate command keyword from its trailing arguments string matching space arrays
+    char* args = 0;
+    for (int i = 0; buffer[i]; i++) {
+        if (buffer[i] == ' ') {
+            buffer[i] = '\0';
+            args = &buffer[i + 1];
+            break;
+        }
+    }
+
+    // Direct structural commands matching dispatcher string trees
+    if (strcmp(buffer, "help") == 0) {
+        cmd_help();
+    } else if (strcmp(buffer, "cls") == 0) {
+        cmd_cls();
+    } else if (strcmp(buffer, "echo") == 0) {
+        cmd_echo(args);
+    } else if (strcmp(buffer, "neofetch") == 0) {
+        cmd_neofetch();
+    } else if (strcmp(buffer, "about_dev") == 0) {
+        cmd_about_dev();
+    } else if (strcmp(buffer, "plane") == 0) {
+        draw_custom_plane();
+    } else if (strcmp(buffer, "twins") == 0) {
+        twins();
+    } else if (strcmp(buffer, "lullaby") == 0) {
+        play_lullaby_sync();
+    } else {
+        fb_puts("\nAero1EOS: '", COLOR_RED, COLOR_BG);
+        fb_puts(buffer, COLOR_WHITE, COLOR_BG);
+        fb_puts("' structural match not found. Type 'help'.\n", COLOR_RED, COLOR_BG);
+    }
+
+    // Re-print structural target prompt loop frame boundary
+    fb_puts("\nAero1EOS / > ", COLOR_YELLOW, COLOR_BG);
+}
+
+/* --- Global Shell Management State --- */
+#define CMD_BUFFER_MAX 256
+static char shell_buffer[CMD_BUFFER_MAX];
+static int shell_buffer_index = 0;
+
+// 1. Initialize global shell indices
+void shell_init(void) {
+    for (int i = 0; i < CMD_BUFFER_MAX; i++) {
+        shell_buffer[i] = '\0';
+    }
+    shell_buffer_index = 0;
+}
+
+// 2. Handle incoming key injections from your testing simulation sequence
+void shell_handle_keypress(char key) {
+    if (key == '\n') {
+        // Enforce safe array ending boundaries
+        shell_buffer[shell_buffer_index] = '\0';
+        
+        // Feed the gathered string to your dispatcher engine
+        shell_dispatch(shell_buffer);
+        
+        // Reset state for the next incoming sequence
+        shell_init();
+    } else {
+        // Safe check preventing random hardware buffer overruns
+        if (shell_buffer_index < (CMD_BUFFER_MAX - 1)) {
+            shell_buffer[shell_buffer_index] = key;
+            shell_buffer_index++;
+            
+            // Print out character locally to emulate standard interactive feedback echo
+            char echo_str[2] = {key, '\0'};
+            fb_puts(echo_str, COLOR_WHITE, COLOR_BG);
+        }
+    }
+}
+
+// 3. Freestanding custom memcpy to resolve internal GCC layout assignments
+void* memcpy(void* dest, const void* src, unsigned int n) {
+    char* d = (char*)dest;
+    const char* s = (const char*)src;
+    while (n--) {
+        *d++ = *s++;
+    }
+    return dest;
+}
+
+
+
+/* === FILE: ./linker-a06.ld === */
+ENTRY(_start)
+
+SECTIONS
+{
+    /* Common entry point address offset passed by Android boot image specs */
+    . = 0x40080000;
+
+    .text : {
+        KEEP(*(.text.boot))
+        *(.text .text.*)
+    }
+
+    .rodata : {
+        *(.rodata .rodata.*)
+    }
+
+    .data : {
+        *(.data .data.*)
+    }
+
+    .bss : ALIGN(16) {
+        __bss_start = .;
+        *(.bss .bss.*)
+        *(COMMON)
+        __bss_end = .;
+        __bss_end = .;
+    }
+
+    _kernel_end = .;
+}
+
+
+
+/* === FILE: ./a06build.sh === */
+#!/bin/sh
+
+# Exit immediately if any command fails
+set -e
+
+# Toolchain Definitions
+CC="aarch64-linux-gnu-gcc"
+LD="aarch64-linux-gnu-ld"
+OBJCOPY="aarch64-linux-gnu-objcopy"
+
+# Compilation & Linker Flags
+CFLAGS="-Wall -O2 -ffreestanding -nostdlib -nostartfiles -fno-stack-protector -fno-builtin"
+LDFLAGS="-T linker-a06.ld -nostdlib"
+
+echo "=== Cleaning old build artifacts ==="
+rm -f *.o *.elf kernel8.img boot.img
+
+echo "=== Compiling Source Files ==="
+
+echo "Assembling entry.S..."
+$CC $CFLAGS -c entry.S -o entry.o
+
+# Compile C Files
+echo "Compiling kernel.c..."
+$CC $CFLAGS -c kernel.c -o kernel.o
+
+echo "Compiling framebuffer-a06.c..."
+$CC $CFLAGS -c framebuffer-a06.c -o framebuffer-a06.o
+
+echo "Compiling font.c..."
+$CC $CFLAGS -c font.c -o font.o
+
+echo "Compiling shell.c..."
+$CC $CFLAGS -c shell.c -o shell.o
+
+
+echo "=== Linking Kernel Object Files ==="
+$LD $LDFLAGS entry.o kernel.o framebuffer-a06.o font.o shell.o -o kernel8.elf
+
+echo "=== Generating Raw Binary Flat Image ==="
+$OBJCOPY -O binary kernel8.elf kernel8.img
+
+echo "=== Build Successful! kernel8.img is ready ==="
+
+echo "=== Packaging Raw Boot Image with mkbootimg ==="
+
+# Validation checks for assets
+if [ ! -f "dtba06" ]; then
+    echo "⚠️ ERROR: Missing 'dtba06' file in this directory!"
+    echo "Please extract the stock DTB from your A065FXXS7BYJ1 firmware and place it here."
+    exit 1
+fi
+
+# Create a blank/dummy ramdisk because modern Android boot headers require the field populated
+if [ ! -f "dummy_ramdisk.cpio" ]; then
+    echo "Creating empty dummy ramdisk..."
+    touch empty_file
+    echo empty_file | cpio -o -H newc > dummy_ramdisk.cpio
+    rm empty_file
+fi
+
+echo "Building Android boot image..." 
+    mkbootimg \
+    --kernel kernel8.img \
+    --ramdisk dummy_ramdisk.cpio \
+    --dtb dtba06 \
+    --base 0x40000000 \
+    --kernel_offset 0x00080000 \
+    --ramdisk_offset 0x04000000 \
+    --tags_offset 0x00000100 \
+    --dtb_offset 0x07000000 \
+    --pagesize 2048 \
+    --header_version 2 \
+    --cmdline "bootopt=64S3,32S1,64S1 console=tty0 loglevel=7 printk.disable_uart=0 earlycon=uart8250,mmio32,0x11002000 gpt" \
+    -o boot.img
+
+
+
+echo "=== SUCCESS: Raw bare-metal boot.img is ready for Samsung A06! ==="
+echo "=== DTB is from A065FXXS7BYJ1 ==="
+
+
+/* === FILE: ./framebuffer-a06.c === */
+#include <stdint.h>
+
+#define SCREEN_WIDTH  720
+#define SCREEN_HEIGHT 1600
+
+static uint32_t* fb = (uint32_t*)0x50607E00; 
+
+extern unsigned char font_bitmap[128][8];
+
+static int cursor_x = 0;
+static int cursor_y = 0;
+
+static inline uint32_t prepare_color_for_mtk(uint32_t rgba) {
+    return rgba;
+}
+
+void fb_draw_pixel(int x, int y, uint32_t color) {
+    if (x >= 0 && x < SCREEN_WIDTH && y >= 0 && y < SCREEN_HEIGHT) {
+        fb[y * SCREEN_WIDTH + x] = prepare_color_for_mtk(color);
+    }
+}
+
+void fb_clear(uint32_t color) {
+    uint32_t target_color = prepare_color_for_mtk(color);
+    for (int i = 0; i < SCREEN_WIDTH * SCREEN_HEIGHT; i++) {
+        fb[i] = target_color;
+    }
+    cursor_x = 0;
+    cursor_y = 0;
+}
+
+void fb_putchar(char c, uint32_t fg, uint32_t bg) {
+    if (c == '\n') {
+        cursor_x = 0;
+        cursor_y += 10; // Shift down for next line boundary
+        return;
+    }
+    if (c == '\r') {
+        cursor_x = 0;
+        return;
+    }
+
+    // Clip screen boundaries safely based on the updated A06 resolution profile
+    if (cursor_x + 8 > SCREEN_WIDTH) {
+        cursor_x = 0;
+        cursor_y += 10;
+    }
+    if (cursor_y + 8 > SCREEN_HEIGHT) {
+        fb_clear(bg); // Reset screen view clear if space runs out
+    }
+
+    if (c < 0 || c > 127) return;
+
+    for (int row = 0; row < 8; row++) {
+        uint8_t bits = font_bitmap[(int)c][row];
+        for (int col = 0; col < 8; col++) {
+            if (bits & (0x80 >> col)) {
+                fb_draw_pixel(cursor_x + col, cursor_y + row, fg);
+            } else {
+                fb_draw_pixel(cursor_x + col, cursor_y + row, bg);
+            }
+        }
+    }
+    cursor_x += 8;
+}
+
+void fb_puts(const char* str, uint32_t fg, uint32_t bg) {
+    while (*str) {
+        fb_putchar(*str++, fg, bg);
+    }
+}
+
+
+/* === FILE: ./entry-4x.S === */
+.section ".text.boot"
+.global _start
+
+_start:
+    // Safe guard: Read core multi-processor affinity register (32-bit equivalent to mpidr_el1)
+    mrc     p15, 0, r0, c0, c0, 5   // Read MPIDR into r0
+    and     r0, r0, #0xFF           // Isolate Core ID (Affinity 0)
+    cmp     r0, #0                  // Check if we are Core 0
+    beq     primary_core            // If 0, execute kernel_main
+
+secondary_core_hold:
+    wfe
+    b       secondary_core_hold
+
+primary_core:
+    // Mask out system interrupts (Disable IRQ and FIQ)
+    cpsid   if
+
+    // Initialize .bss boundaries to clean memory state
+    ldr     r0, =__bss_start
+    ldr     r1, =__bss_end
+    cmp     r1, r0                  // Check if BSS length is 0
+    beq     init_stack
+
+    mov     r2, #0                  // Use r2 as our zero register replacement
+
+clear_bss:
+    str     r2, [r0], #4            // Store 0 and advance pointer by 4 bytes (32-bit width)
+    cmp     r0, r1                  // Compare current pointer against __bss_end
+    blo     clear_bss               // Loop if current pointer is less than __bss_end
+
+init_stack:
+    // Anchor the top of the stack frame within the safe memory space
+    ldr     r0, =_kernel_end
+    add     r0, r0, #0x40000        // Allocate 256KB for safe workspace runtime
+    mov     sp, r0
+
+    // Direct jump into operating system kernel entry point
+    bl      kernel_main
+
+kernel_panic_halt:
+    wfe
+    b       kernel_panic_halt
+
+
+
