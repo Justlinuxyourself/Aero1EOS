@@ -430,16 +430,15 @@ void cmd_about_dev() {
 	vga_write("Hi my name is ali, i am 12 years old, and i like anything that has engines :3");
 }
 void draw_custom_plane() {
-    int col = 25; // Center it
-    
-    vga_set_cursor(col, 5);  vga_write("            __\\/__");
-    vga_set_cursor(col, 6);  vga_write("           `==/\\==` ");
-    vga_set_cursor(col, 7);  vga_write(" ____________/__\\____________");
-    vga_set_cursor(col, 8);  vga_write("/____________________________\\");
-    vga_set_cursor(col, 9);  vga_write("  __||__||__/.--.\\__||__||__");
-    vga_set_cursor(col, 10); vga_write(" /__|___|___( >< )___|___|__\\");
-    vga_set_cursor(col, 11); vga_write("           _/`--`\\_");
-    vga_set_cursor(col, 12); vga_write("          (/------\\)");
+   
+    vga_write("            __\\/__");
+    vga_write("           `==/\\==` ");
+    vga_write(" ____________/__\\____________");
+    vga_write("/____________________________\\");
+    vga_write("  __||__||__/.--.\\__||__||__");
+    vga_write(" /__|___|___( >< )___|___|__\\");
+    vga_write("           _/`--`\\_");
+    vga_write("          (/------\\)");
 }
 
 void twins() {
@@ -456,7 +455,7 @@ void twins() {
         "MARCEL", "FERIBSD", "SUMY", "KYOO", "LEXUS", "RAYYAN", "CAIN", 
         "ABEL", "<<OLIVIA>>", "EIAN", "REN", "SWEET POTATO", "DEITY", 
         "SPECIAL: GaroDaemon", "SPECIAL: ANTI-XV", "SPECIAL: Apple eater", 
-        "SPECIAL: Bricky (kindred)", "SPECIAL: Kris", "SPECIAL: Panzerkampfwagen VIII manus", "SPECIAL 2X: MACH10", "SPECIAL 2X: YUNIA"
+        "SPECIAL: Bricky (kindred)", "SPECIAL: Kris", "SPECIAL: Panzerkampfwagen VIII manus", "SPECIAL 2X: MACH10", "SPECIAL 2X: YUNIA", "SPECIAL FOR MAKING ME A EXCEPTION ON A SERVER: NANA"
     };
 
     int total_names = sizeof(names) / sizeof(names[0]);
