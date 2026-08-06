@@ -11,10 +11,10 @@
 
     memory@40000000 {
         device_type = "memory";
-        reg = <0x0 0x40000000 0x0 0x10000000>; /* System RAM: 256MB safely stopping before your FB */
+        reg = <0x0 0x40000000 0x0 0x10000000>; /* System RAM: 256MB safely stopping before FB */
     };
 
-    /* This maps your exact phone-shaped display window safely outside main system allocation loops */
+    /* This maps the exact phone-shaped display window safely outside main system allocation loops */
     framebuffer@50607e00 {
         compatible = "simple-framebuffer";
         reg = <0x0 0x50607e00 0x0 0x00465000>; /* 720x1600x4 bytes allocation window */
