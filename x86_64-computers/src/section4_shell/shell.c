@@ -29,6 +29,8 @@ extern void ide_read_sector_bytes(uint32_t lba, uint8_t* buffer);
 extern void ide_write_sector_bytes(uint32_t lba, uint8_t* buffer);
 extern void vga_set_color(unsigned char color);
 extern int cmos_get_sec();
+extern int cmos_get_month();
+extern int cmos_get_day();
 extern void sleep_ms();
 extern uint32_t ide_get_total_sectors();
 extern unsigned int get_uptime_ms();
@@ -37,6 +39,10 @@ extern void cmd_start_gui();
 extern int strncmp(const char* s1, const char* s2, int n);
 int alifs_is_directory(char* name);
 extern void print_to_tty(const char* str, int tty_idx);
+extern void cmos_read_password();
+extern void timer_wait_tick();
+extern int kbd_get_char();
+extern void cmos_write_password();
 // Simple PRNG state
 static uint32_t next_rand = 1;
 // kernel start and end
@@ -116,7 +122,7 @@ typedef struct {
     char command_buffer[80];
     int buffer_idx;
 } tty_t;
-
+extern char *strrchr(const char *str, int character);
 extern tty_t ttys[];
 extern int current_tty;
 extern unsigned char current_vga_color;
@@ -278,7 +284,6 @@ char* ltoa(long value, char* str) {
     reverse(str, i);
     return str;
 }
-
 /* --- Built-in Commands --- */
 void cmd_help(char* args) {
     (void)args;

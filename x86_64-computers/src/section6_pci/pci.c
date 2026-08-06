@@ -1,5 +1,5 @@
 #include "../section1_cpu/io.h"
-
+extern void vga_write();
 // PCI ports
 #define PCI_CONFIG_ADDR 0xCF8
 #define PCI_CONFIG_DATA 0xCFC

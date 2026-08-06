@@ -4,7 +4,8 @@ OBJDIR = obj
 BIN = aero1eos4.bin
 ISO = aero1eos4.iso
 PAYLOAD_H = $(SRCDIR)/section4_shell/grub_payload.h
-
+CC = x86_64-linux-gnu-gcc
+LD = x86_64-linux-gnu-ld
 C_SOURCES = $(shell find $(SRCDIR) -name '*.c')
 ASM_SOURCES = $(shell find $(SRCDIR) -name '*.asm')
 
@@ -30,7 +31,7 @@ $(PAYLOAD_H):
 # --- PASS 2: Link the binary ---
 $(BIN): $(PAYLOAD_H) $(OBJ)
 	@echo "--- LINKING AERO1EOS BINARY ---"
-	ld $(LDFLAGS) -o $(BIN) $(OBJ)
+	$(LD) $(LDFLAGS) -o $(BIN) $(OBJ)
 
 # --- PASS 3: Replace the dummy header with the REAL data ---
 # This rule is called manually or via a special target to avoid the circular loop
@@ -44,13 +45,13 @@ update_payload: $(BIN)
 	xxd -i $(BIN) >> $(PAYLOAD_H)
 	@rm boot.img grub_core.img
 	@# Recompile only the installer with the real data
-	gcc $(CFLAGS) $(SRCDIR)/section4_shell/installer.c -o $(OBJDIR)/section4_shell/installer.o
+	$(CC) $(CFLAGS) $(SRCDIR)/section4_shell/installer.c -o $(OBJDIR)/section4_shell/installer.o
 	@# Final Link
-	ld $(LDFLAGS) -o $(BIN) $(OBJDIR)/section1_cpu/boot.o $(filter-out $(OBJDIR)/section1_cpu/boot.o, $(OBJ))
+	$(LD) $(LDFLAGS) -o $(BIN) $(OBJDIR)/section1_cpu/boot.o $(filter-out $(OBJDIR)/section1_cpu/boot.o, $(OBJ))
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	@mkdir -p $(@D)
-	gcc $(CFLAGS) $< -o $@
+	$(CC) $(CFLAGS) $< -o $@
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.asm
 	@mkdir -p $(@D)

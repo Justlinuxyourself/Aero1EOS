@@ -18,6 +18,7 @@ extern int cmos_get_day();
 extern int cmos_get_month();
 extern int cmos_get_sec();
 extern void update_hardware_cursor();
+extern void vga_draw_status_bar();
 int timezone_offset_seconds = 0; // The "Master" variable
 int kernel_stdout_tty = 0;
 // Independent TTY structure

@@ -60,6 +60,9 @@ extern void cmos_read_password(char* dest_buffer);
 #define CMOS_MAGIC_VAL      0xA5  // A distinct byte to signal "Initialized"
 extern unsigned char read_cmos(unsigned char reg);
 extern void write_cmos(unsigned char reg, unsigned char val);
+extern int cmos_get_min();
+extern int cmos_get_hour();
+extern int cmos_get_sec();
 int strcmp_custom(char* s1, char* s2) {
     int i = 0;
     while (s1[i] != '\0' || s2[i] != '\0') {
@@ -138,8 +141,6 @@ void bootup_screen() {
 void lock_system_hardened() {
     char live_secret[11] = {0}; 
     cmos_read_password(live_secret);
-    set_failed_attempts(0);
-
     // If the first register is completely blank (0x00), skip the lock screen entirely
     if (live_secret[0] == '\0') {
         return;
@@ -345,13 +346,9 @@ void kernel_main() {
     vga_write(" bytes\n");
     // 5. Final Stage
     log_verbose("SYS", "Initialization sequence complete.");
-    
-    sleep_ms(1000);
     vga_clear();
     bootup_screen();
     startup_melody();
-
-    sleep_ms(1000);
 
     while (inb(0x64) & 0x01) { inb(0x60); }
 

@@ -1,0 +1,26 @@
+/dts-v1/;
+/ {
+    #address-cells = <2>;
+    #size-cells = <2>;
+    model = "V2M-P1";
+    compatible = "arm,vexpress";
+
+    chosen {
+        bootargs = "console=ttyAMA0 earlycon";
+    };
+
+    memory@40000000 {
+        device_type = "memory";
+        reg = <0x0 0x40000000 0x0 0x10000000>; /* System RAM: 256MB safely stopping before your FB */
+    };
+
+    /* This maps your exact phone-shaped display window safely outside main system allocation loops */
+    framebuffer@50607e00 {
+        compatible = "simple-framebuffer";
+        reg = <0x0 0x50607e00 0x0 0x00465000>; /* 720x1600x4 bytes allocation window */
+        width = <720>;
+        height = <1600>;
+        stride = <2880>;
+        format = "a8r8g8b8";
+    };
+};
