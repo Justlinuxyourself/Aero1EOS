@@ -81,7 +81,7 @@ jobs:
           total_count = current_count + 467
           
           # 2. Update the README file
-          with open('x86_64-computers/README.md', 'r') as f:
+          with open('README.md', 'r') as f:
               content = f.read()
           
           prefix = "<!--COMMIT_COUNT-->"
