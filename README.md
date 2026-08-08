@@ -1,7 +1,7 @@
 <h1 align="center">💻 Aero1EOS 4.0 - Notebook Edition</h1>
 
 <h3 align="center">
-  Total Development Commits: <!--COMMIT_COUNT-->1050<!--/COMMIT_COUNT-->
+  Total Development Commits: <!--COMMIT_COUNT-->1052<!--/COMMIT_COUNT-->
 </h3>
 
 <p align="center">
@@ -15,9 +15,6 @@
 </p>
 
 ---
-
-&nbsp;
-
 > [!WARNING]
 > some features dont work on real hardware, and some are untested.
 
