@@ -3,7 +3,7 @@ ENTRY(_start)
 SECTIONS
 {
     /* Common entry point address offset passed by Android boot image specs */
-    . = 0x4008000;
+    . = 0x40008000;
 
     .text : {
         KEEP(*(.text.boot))
