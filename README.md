@@ -1,56 +1,48 @@
 <h1 align="center">💻 Aero1EOS 4.0 - Notebook Edition</h1>
 
 <h3 align="center">
-Total Development Commits: <! --COMMIT_COUNT-->1044<!--/COMMIT_COUNT-->
+  Total Development Commits: <!--COMMIT_COUNT-->1050<!--/COMMIT_COUNT-->
 </h3>
 
 <p align="center">
-<img src="https://img.shields.io/badge/Built%20With-C-A8B9CC?style=flat-square&logo=c&logoColor=white" alt="C">
-<img src="https://img.shields.io/badge/Built%20With-Assembly-62A106?style=flat-square&logo=assemblyscript&logoColor=white" alt="ASM">
+  <img src="https://img.shields.io/badge/Built%20With-C-A8B9CC?style=flat-square&logo=c&logoColor=white" alt="C">
+  <img src="https://img.shields.io/badge/Built%20With-Assembly-62A106?style=flat-square&logo=assemblyscript&logoColor=white" alt="ASM">
 </p>
 
 <p align="center">
-<strong>A custom-built, 64-bit "Notebook" style operating system.</strong><br>
-Featuring a hardened security, multi-terminal interface, and real-time hardware integration.<br>
-made by <strong>علي يحي علي صميلي</strong>
+  <strong>A custom-built, 64-bit "Notebook" style operating system.</strong><br>
+  Featuring a hardened security model, multi-terminal interface, and real-time hardware integration, All made by "علي يحي علي صميلي"
 </p>
 
 ---
+> [!WARNING]
+> some features dont work on real hardware, and some are untested.
 
-> [! WARNING]
-> Some things don't work when you're using real hardware, and there are a few that haven't been tested yet.
+Aero1EOS 4 is a custom-built, 64-bit "Notebook" style operating system. It features a hardened security model, a multi-terminal interface (TTY), and a real-time status bar calibrated for high-precision timing, All made by "علي يحي علي صميلي"
+## 🚀 Key Features
 
-Aero1EOS 4 is a OS that was built from scratch. It's like a notebook for your computer, but it's safe and secure. This OS has a few cool features, like a multi-terminal interface, which is like having multiple windows open at the same time. It also has a status bar that's super accurate and can keep track of time really well. The person who made all this possible is **علي يحي علي صميلي** Which is me.
-
----
-
-## Key Features
-
-* **64-bit Long Mode:** This is a way to start up a computer from a 32-bit Multiboot 2 system and get into a 64-bit environment.
-* **Stronger Protection:** A security feature, called `lock_system_hardened`, has been added to keep users safe. It remembers when someone (a stealer) tries to log in with the wrong password, even after you turn your computer off and on again. This helps stop people from brute forcing your password.
-* **Multi-TTY Support:** Supports 10 virtual terminals (`TTY0`–`TTY9`) accessible via `Ctrl + Alt + F1-F10`.
-* **Status Bar at a Glance:** You'll always see the current date and time in a 12-hour format, and the ID of the active TTY, all displayed in a dedicated space at the bottom of your screen, and it gets its information straight from the CMOS.
-* **Dynamic Shell:** Has command tab-completion, system diagnostics (`sysinfo`), and real-time memory tracking.
+**64-bit Long Mode:** Boots from 32-bit Multiboot 2 into a fully functional 64-bit environment with identity-mapped paging.
+**Hardened Security:** Integrated `lock_system_hardened` routine that stores failed login attempts in CMOS to prevent unauthorized access across reboots. (PASSWORD: Ali123)
+**Multi-TTY Support:** Supports 10 independent virtual terminals (TTY0-TTY9) accessible via `Ctrl + Alt + F1-F10`.
+**Real-Time Status Bar:** A persistent 25th-row UI showing Date, Time (12h format), and active TTY ID, driven by CMOS data.
+**Dynamic Shell:** Features command tab-completion, system diagnostics (`neofetch`), and real-time memory tracking.
 
 ---
 
 ## 🏗️ Technical Architecture
 
 ### 1. Boot & Memory
-
-* **Kernel Entry:** Written in ASM (`boot.asm`), it builds a 4-level paging hierarchy (`PML4` -> `PDPT` -> `PDT`).
-* **Huge Pages:** To make things easier, the system uses big chunks of memory, called "Huge Pages", to ID map out the first 64MB of RAM. This is done in a simple way, using 2MB pages, which helps to keep the initial memory map straightforward.
-* **Heap Manager:** A dynamic memory allocator starting right after the kernel (`kernel_end`) to prevent memory allocations from overwriting kernel code.
+**Kernel Entry:** Written in Assembly (`boot.asm`), it builds a 4-level paging hierarchy: PML4 -> PDPT -> PDT.
+**Huge Pages:** Identity maps the first 64MB of RAM using 2MB "Huge Pages" to simplify the initial memory map.
+**Heap Manager:** A dynamic memory allocator starting after the kernel (`kernel_end`) to avoid overlapping kernel code when something is added.
 
 ### 2. Clock & Timing
-
-* **PIT Frequency:** The Programmable Interval Timer is set to run at a frequency of **200Hz**, which is done by using a divisor of 11931. This setting is used for both uptime and sleep functions, note that it operates at **200Hz** instead of the expected **100Hz**.
-* **Polling Loop:** The kernel has a loop that checks the hardware regularly, called `timer_wait_tick`, to make sure the clock updates every 100 ticks without stopping what the user is doing.
+**PIT Frequency:** The Programmable Interval Timer is calibrated to **200Hz** (divisor 11931) for uptime and sleep functions (for some reason it runs at 200hz).
+**Polling Loop:** The kernel uses a hardware polling loop (`timer_wait_tick`) to ensure the clock updates every 100 ticks without interrupting user input.
 
 ### 3. Video & I/O
-
-* **VGA Driver:** Manages an 80x25 text buffer at `0xB8000` with custom "Notebook Yellow" styling (`0x1E`, hence why Aero1EOS is named).
-* **CMOS Integration:** It talks directly to the computer's hardware ports, like `0x70/0x71` (CMOS ports), to get the current time and keep track of any security issues that happen. This helps the system stay safe and know what's going on at all times.
+**VGA Driver:** Manages an 80x25 text buffer at `0xB8000` with custom "Notebook Yellow" styling (0x1E).
+**CMOS Integration:** Directly communicates with hardware ports `0x70/0x71` to retrieve real-time clock data and track security strikes.
 
 ---
 
@@ -58,78 +50,71 @@ Aero1EOS 4 is a OS that was built from scratch. It's like a notebook for your co
 
 | Command | Description |
 | :--- | :--- |
-| `help` | Lists all system commands. |
-| `cls` | Clears the screen. |
-| `sysinfo` | Displays CPU vendor, RAM usage. |
-| `uptime` | Displays the amount of time Aero1EOS has been up and running. |
-| `free` | This tool checks how much RAM is being used, including the total amount, how much is used, and how much is free. |
-| `timezone` | This setting changes the clock in the status bar to show the right time for your area, and it does it instantly. |
-| `lock` | This is what you use to manually trigger a super secure lock screen. |
-| `test` | Checks the timer is working correctly by counting down from 5 seconds. |
-| `beep` | Makes a sound on your computer, like a warning bell, using the PC Speaker, but it has a problem that needs to be fixed, which you can find out more about in the Bugs section. |
-| `twins` | This is where I list my twins' names, they're really special to me, my favorite twins 🥹🥹🥹 |
-| `sleep` | This command makes the system sleep until you press a key. |
-| `plane` | It displays an image of a plane using ASCII characters. |
-| `about_dev` | About the developer. |
-| `echo` | prints out the text you want to see on the screen. |
-| `ayah` | It picks a random verse from the Quran and shows it to you. |
-| `verse` | This feature selects a random verse from the Bible and displays it for you. |
-| `tdadd` | This is used to add a new to-do item to the list in memory. |
-| `tdshw` | Displays tasks stored in memory. |
-| `calc` | Simple calculator. |
+| `help` | Lists all registered system commands. |
+| `cls` | Clears the notebook screen. |
+| `neofetch` | Displays CPU vendor, RAM usage, and OS mode. |
+| `uptime` | Show how long Aero1EOS has been running. |
+| `free` | Check dynamic RAM usage (Total, Used, Free). |
+| `timezone` | Adjusts the status bar clock offset in real-time. |
+| `lock` | Manually triggers the hardened lock screen. |
+| `test` | Verifies timer calibration with a 5s countdown. |
+| `beep` | Plays a system alert sound through the PC Speaker. (has a bug, check **Bugs** section.)|
+| `twins` | Shows my twins names bc they are my peakest twins 🥹🥹🥹|
+| `sleep` | puts system in sleep until a key press |
+| `plane` | shows a art of a plane |
+| `about_dev` | About Developer |
+| `echo`| print text to screen |
+| `ayah` | chooses random ayah from quran and prints it |
+| `verse` | chooses random verse from the bible and prints it |
+| `tdadd` | adds todo to mem |
+| `tdshw` | shows todo from mem |
+| `calc` | Calculator |
 
-*Run `help` in the shell to see even more commands!* 🥹🥹🥹
+many more with the `help` command 🥹🥹🥹
 
----
-
+## 📁 Directory Structure
+```text
+.
+├── src
+│   ├── kernel.c           # Main OS Loop & Hardening Logic
+│   ├── section1_cpu       # Boot, Timer, Speaker, & Heap
+│   ├── section2_video     # VGA Driver & TTY Management
+│   ├── section3_io        # CMOS & Keyboard Drivers
+│   └── section4_shell     # Shell Logic & Command Library
+└── linker.ld              # Kernel Memory Layout
+```
 ## 🍎 Bad Apple!! VGA Demo
-
-Aero1EOS 4 comes with a special demo that shows off its capabilities. This demo is called "Bad Apple!!" and it's an ASCII animation. The main goal of this demo is to highlight how stable the kernel is when it comes to quickly mapping VGA memory. It also showcases the **Notebook Edition** and its independent TTY system, which can handle things on its own.
+Aero1EOS 4 includes a built-in "Bad Apple!!" ASCII animation demo to showcase the stability of the kernel's high-speed VGA memory mapping and the **Notebook-Edition** independent TTY system.
 
 ### 🛠 Technical Specifications
-
-* **Resolution:** 80x24 *(Workspace mode — row 25 is reserved for the status bar!)*
-* **Protected Status Bar:** The 25th row still works perfectly, showing the current time and active TTY ID in real-time, without any interruptions or flickering, even when something is playing.
-* **Memory Mapping:** Direct writes to `0xB8000` using a high-performance DMA-simulated loop.
-
----
-
-## 💬 Aero1EOS Community
-
-* [Discord Server](https://discord.gg/26JRFCRpFV)
-
----
-
-## 🐛 Bugs
-
-* Beep stutters in QEMU emulator.
-* For some reason, When PIT speed is set to 100Hz, the computer makes a second half a second, but 200Hz doesnt
-
----
-
-## 📋 Todo
-
-- [x] **ADD:** ATA Support (With AliFS)
-- [x] **Fix:** Beep stutter issue *(works fine on actual hardware)*
-- [ ] **ADD:** PCI Driver *(WIP)*
-- [ ] **Add:** Support for Ethernet and/or Wi-Fi connections, this feature is currently a work in progress.
-- [ ] **GUI:** Create a user interface for the OS, but this might not happen anytime soon as i already made a TUI.
-
----
+**Resolution:** 80x24 (Workspace mode) (24 BC OF STATUS BAR!!!(
+**Frame Rate:** ~10-15 FPS (Adjustable via kernel delay loop)
+**Protected Status Bar:** The 25th row remains fully functional, displaying the real-time CMOS clock and active TTY ID without flickering during playback.
+**Memory Mapping:** Direct writes to `0xB8000` using a high-performance DMA-simulated loop.
 
 ## 📜 Licensing & Credits
 
-Aero1EOS 4.0 is free to use because it's open-source, and it's covered by the **MIT License**.
+### Kernel & Operating System
+Aero1EOS 4.0 is open-source software licensed under the **MIT License**. 
 
-By using, modifying, or distributing this software, you agree to the following terms:
+ using, modifying, or distributing this software, you agree to the following terms:
+**Attribution Required:** You must preserve the original copyright notice and permission notice in all copies or substantial portions of the software.
+**No Warranty:** The software is provided "as is", without warranty of any kind. The author is not liable for any damages or data loss resulting from its use.
 
-* When using this software, you have to keep the original copyright notice and permission notice in all files.
-
-* **No Guarantee:** This OS comes with no promises. Im not responsible if something goes wrong or you lose data when you use it.
-
-> [! CAUTION]
-> **Important Notice:** If you change or share this, remember to give credit. The MIT license lets you modify and share, but you can't remove my name or say you made it if you didn't. You also can't rebrand Aero1EOS without saying who really made it. If you don't follow these rules, it's against the law and we'll know because of Git history, We'll tell everyone about it on places like GitHub, And if Github doesn't bring it down or anything, May Allah put u in front of me in the day of judgement so we can have a proper conversation.
+> [!CAUTION]
+> **Plagiarism Warning:** While the MIT license permits modification and redistribution, removing the developer's name, claiming authorship of the original core components, or rebranding Aero1EOS without explicit attribution violates the license terms. Copyright infringement and license violations will be tracked via Git history and reported publicly on hosting platforms.
 
 ### Demo Assets
-
-* **Bad Apple!! Animation: ** This is based on the *Touhou Project*. We're using these assets to show how well the Aero1EOS 4 video driver works, and they were made using ffmpeg on the bad apple video.
+**Bad Apple!! Animation:** Based on *Touhou Project*. These ASCII assets are community-driven and included solely for demonstrating the Aero1EOS 4 video driver performance.
+## Aero1EOS Communitys
+[Discord Server](https://discord.gg/26JRFCRpFV)
+[Sub Reddit](https://reddit.com/d/Aero1EOS)
+## Bugs:
+- Beep stutters
+- pit timer runs at 200hz instead of 100hz for some reason
+## Todo:
+- [ ] ADD: PCI Driver (WIP)
+- [ ] ADD: ETH and/or WIFI Support (WIP)
+- [ ] ADD: GUI Support (might never add)
+- [x] ADD: ATA Support (With AliFS)
+- [x] FIX: Beep stutter (Doesnt stutter on real hardware)
