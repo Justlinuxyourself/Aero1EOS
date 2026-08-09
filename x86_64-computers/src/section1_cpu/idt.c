@@ -168,7 +168,7 @@ void c_kernel_panic(CpuPanicState* state) {
     vga_write("  RBP: "); print_hex64(state->rbp); vga_write("  R8:  "); print_hex64(state->r8);  vga_write("  R9:  "); print_hex64(state->r9);  vga_write("\n");
     vga_write("  R10: "); print_hex64(state->r10); vga_write("  R11: "); print_hex64(state->r11); vga_write("  R12: "); print_hex64(state->r12); vga_write("\n");
     vga_write("################################################################################");
-    vga_write("(hahaha looks whos cpu is fucked)");
+    vga_write("(if its a bug submit it to my repos issues page on github!!!)");
     kernel_panic_sound();
     // Left vga_draw_status_bar() out entirely to keep it pristine full black!
 }
