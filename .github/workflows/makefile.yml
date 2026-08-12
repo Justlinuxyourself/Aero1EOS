@@ -123,6 +123,7 @@ jobs:
           from zoneinfo import ZoneInfo, available_timezones
 
           webhook_url = os.getenv('DISCORD_WEBHOOK')
+          webhook_url_2 = os.getenv('DISCORD_WEBHOOK_2')
           commit_msg = os.getenv('COMMIT_MSG', 'Manual Sync/Update')
           build_status = os.getenv('BUILD_STATUS', 'failure')
           
@@ -194,4 +195,5 @@ jobs:
               }]
           }
           requests.post(webhook_url, json=payload)
+          requests.post(webhook_url_2, json=payload)
           EOF
