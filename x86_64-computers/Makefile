@@ -68,4 +68,23 @@ $(ISO): $(BIN)
 clean:
 	rm -rf $(OBJDIR) $(BIN) $(ISO) isodir $(PAYLOAD_H)
 
-.PHONY: all clean update_payload
+.PHONY: all clean update_payload run _check-qemu _create-disk
+
+run: _check-qemu _create-disk
+	@echo "Starting QEMU with sound support..."
+	qemu-system-x86_64 -m 64M \
+	  -drive file=aero1eos.img,format=raw \
+	  -cdrom aero1eos4.iso \
+	  -boot d \
+	  -audiodev $$(if [ -n "$$PIPEWIRE_REMOTE" ] || [ -S /run/user/$$(id -u)/pipewire-0 ]; then echo "pipewire,id=snd0"; elif pactl info >/dev/null 2>&1; then echo "pa,id=snd0"; else echo "alsa,id=snd0"; fi) \
+	  -device intel-hda \
+	  -device hda-duplex,audiodev=snd0
+
+_check-qemu:
+	@which qemu-system-x86_64 > /dev/null || (echo "Error: qemu-system-x86_64 is not installed." && exit 1)
+
+_create-disk:
+	@if [ ! -f aero1eos.img ]; then \
+		echo "Creating disk image aero1eos.img..."; \
+		qemu-img create -f raw aero1eos.img 10G; \
+	fi
