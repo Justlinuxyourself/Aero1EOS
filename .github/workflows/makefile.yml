@@ -110,6 +110,7 @@ jobs:
         if: always()
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          DISCORD_WEBHOOK_2: ${{ secrets.DISCORD_WEBHOOK_2 }}
           BUILD_STATUS: ${{ steps.build_step.outcome }}
         run: |
           LATEST_MSG=$(git log -1 --pretty=%B)
