@@ -78,7 +78,6 @@ jobs:
           
           # 1. Calculate count
           import os
-          github-actions[bot] using native git flags
           cmd = 'git rev-list --count --invert-grep --author="github-actions\\[bot\\]" HEAD'
           current_count = int(os.popen(cmd).read().strip())
           total_count = current_count + 467
