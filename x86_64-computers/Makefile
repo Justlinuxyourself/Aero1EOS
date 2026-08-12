@@ -12,7 +12,7 @@ ASM_SOURCES = $(shell find $(SRCDIR) -name '*.asm')
 OBJ = $(C_SOURCES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
 OBJ += $(ASM_SOURCES:$(SRCDIR)/%.asm=$(OBJDIR)/%.o)
 
-CFLAGS = -m64 -c -ffreestanding -fno-stack-protector -Iinclude -Wall -Wextra
+CFLAGS = -m64 -c -ffreestanding -fno-stack-protector -Iinclude -Wall -Wextra -w
 LDFLAGS = -n -T linker.ld --build-id=none -z max-page-size=0x1000 --no-warn-rwx-segments
 
 all: $(ISO)

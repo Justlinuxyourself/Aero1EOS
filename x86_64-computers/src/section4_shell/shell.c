@@ -1,3 +1,4 @@
+#include "../section8_global-header/global.h"
 /* 
 Copyright (c) 2026 Ali  
 All rights reserved.
@@ -15,74 +16,14 @@ All rights reserved.
 #define MAX_TTYS 10
 volatile int is_sleeping = 0;
 static command_node_t* command_list = 0;
-extern unsigned int get_uptime_seconds();
-extern unsigned int get_total_ram_bytes();
-extern void lock_system_hardened();
-extern int timezone_offset_seconds;
-extern void vga_draw_status_bar();
-extern void play_sound();
-extern void nosound();
-extern void vga_set_cursor();
-extern void sleep();
-extern void cmd_install_os();
-extern void ide_read_sector_bytes(uint32_t lba, uint8_t* buffer);
-extern void ide_write_sector_bytes(uint32_t lba, uint8_t* buffer);
-extern void vga_set_color(unsigned char color);
-extern int cmos_get_sec();
-extern int cmos_get_month();
-extern int cmos_get_day();
-extern void sleep_ms();
-extern uint32_t ide_get_total_sectors();
-extern unsigned int get_uptime_ms();
-extern char wait_for_key();
-extern void cmd_start_gui();
-extern int strncmp(const char* s1, const char* s2, int n);
 int alifs_is_directory(char* name);
-extern void print_to_tty(const char* str, int tty_idx);
-extern void cmos_read_password();
-extern void timer_wait_tick();
-extern int kbd_get_char();
-extern void cmos_write_password();
 // Simple PRNG state
 static uint32_t next_rand = 1;
 // kernel start and end
-extern uint8_t _kernel_start;
-extern uint8_t _kernel_end;
 char current_path[256] = "/"; // Start at root
-typedef struct {
-    char key[16];
-    char value[32];
-    int active;
-} env_var_t;
-
 env_var_t env_table[10]; // Store up to 10 variables in RAM
 // some structs are down with the code that uses it bc i didnt plan for it, it just popped up in my head
-typedef struct {
-    char task[48];
-    int done;
-    int active;
-} todo_t;
-
 todo_t my_list[10]; // 10 slots for your daily goals
-
-typedef struct {
-    const char* ar;
-    const char* en;
-    const char* meaning;
-} name_99_t;
-
-typedef struct {
-    const char* book;
-    int chapter;
-    int verse;
-    const char* text;
-} bible_t;
-
-typedef struct {
-    int surah;
-    int ayah;
-    const char* text;
-} ayah_t;
 // i hope this works
 
 #define QR_SIZE 21
@@ -116,18 +57,6 @@ const unsigned char alios_discord_qr[QR_SIZE][QR_SIZE] = {
 #define WIDTH 80
 #define HEIGHT 25
 
-typedef struct {
-    unsigned short* buffer;
-    int cursor_pos;
-    char command_buffer[80];
-    int buffer_idx;
-} tty_t;
-extern char *strrchr(const char *str, int character);
-extern tty_t ttys[];
-extern int current_tty;
-extern unsigned char current_vga_color;
-extern void vga_clear();
-extern int status_bar_enabled;
 #define CMATRIX_COLS 80
 #define CMATRIX_ROWS 24 // Leave row 24 safe for status bar!
 #define DVD_COLS 80
@@ -139,7 +68,6 @@ int history_count = 0;
 #define MAX_SNAKE_LEN 100
 #include "../section7_posix/syscall.h"
 int fd_result = -1;
-extern int alifs_delete_recursive(char* path);
 
 /* --- String Helpers --- */
 int strcmp(const char* s1, const char* s2) {
@@ -147,28 +75,6 @@ int strcmp(const char* s1, const char* s2) {
     return *(unsigned char*)s1 - *(unsigned char*)s2;
 }
 
-int strncmp(const char* s1, const char* s2, int n) {
-    while (n--) {
-        if (*s1 != *s2++) return *(unsigned char*)s1 - *(unsigned char*)--s2;
-        if (*s1++ == 0) break;
-    }
-    return 0;
-}
-
-int strlen(const char* s) {
-    int len = 0;
-    while (s[len]) len++;
-    return len;
-}
-
-void strcpy(char* dest, const char* src) {
-    int i = 0;
-    while (src[i] != '\0') {
-        dest[i] = src[i];
-        i++;
-    }
-    dest[i] = '\0';
-}
 /* Helper: Reverse a string in place */
 void reverse(char* str, int length) {
     int start = 0;

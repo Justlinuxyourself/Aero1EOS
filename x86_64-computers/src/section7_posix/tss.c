@@ -1,22 +1,8 @@
+#include "../section8_global-header/global.h"
 #include <stdint.h>
 #include <stddef.h>
 
-extern uint16_t tss_base_low;
-extern uint8_t  tss_base_mid;
-extern uint8_t  tss_base_high;
-extern uint32_t tss_base_upper;
 
-typedef struct {
-    uint32_t reserved0;
-    uint64_t rsp0;
-    uint64_t rsp1;
-    uint64_t rsp2;
-    uint64_t reserved1;
-    uint64_t ist1, ist2, ist3, ist4, ist5, ist6, ist7;
-    uint64_t reserved2;
-    uint16_t reserved3;
-    uint16_t iopb_offset;
-} __attribute__((packed)) tss_t;
 
 static tss_t tss __attribute__((aligned(16)));
 

@@ -1,62 +1,17 @@
+#include "../section8_global-header/global.h"
 #include <stdint.h>
 
-extern void vga_set_color(unsigned char color);
-extern void vga_write(const char* data);
-extern void vga_putchar(char c);
-extern void update_hardware_cursor(int pos);
-extern void play_sound(unsigned int nFrequence);
-extern void isr_syscall(void);
-extern void nosound();
 // Independent TTY structure matching vga.c exactly
-typedef struct {
-    unsigned short* buffer;
-    int cursor_pos;
-    char command_buffer[80];
-    int buffer_idx;
-} tty_t;
 
-extern tty_t ttys[];
-extern int current_tty;
 
 // 64-bit IDT Entry structure layout
-typedef struct {
-    uint16_t offset_low;
-    uint16_t selector;
-    uint8_t  ist;
-    uint8_t  type_attributes;
-    uint16_t offset_mid;
-    uint32_t offset_high;
-    uint32_t reserved;
-} __attribute__((packed)) IdtEntry;
 
 // IDT Pointer structure for lids instruction
-typedef struct {
-    uint16_t limit;
-    uint64_t base;
-} __attribute__((packed)) IdtPointer;
 
-typedef struct {
-    uint64_t cr3;
-    uint64_t cr2;
-    uint64_t rax; uint64_t rbx; uint64_t rcx; uint64_t rdx;
-    uint64_t rsi; uint64_t rdi; uint64_t rbp;
-    uint64_t r8;  uint64_t r9;  uint64_t r10; uint64_t r11;
-    uint64_t r12; uint64_t r13; uint64_t r14; uint64_t r15;
-    
-    // Tracked vectors
-    uint64_t exception_vector;
-    uint64_t hardware_error_code;
-    uint64_t rip; // Address where execution broke
-    uint64_t cs;
-    uint64_t rflags;
-    uint64_t rsp;
-    uint64_t ss;
-} __attribute__((packed)) CpuPanicState;
 
 static IdtEntry idt[256];
 static IdtPointer idt_ptr;
 
-extern uint64_t exception_table[32];
 
 // Human-readable names for every exception context
 static const char* exception_messages[] = {

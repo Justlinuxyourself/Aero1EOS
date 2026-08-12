@@ -1,22 +1,5 @@
+#include "../section8_global-header/global.h"
 #include "aliscr.h"
-/* EXTERN DECLARATIONS (Since we aren't using headers) */
-extern void vga_write(const char* data);
-extern void vga_putchar(char c);
-extern char kbd_get_char(unsigned char scancode);
-extern void vga_clear();
-extern int atoi_custom(char* s); // Ensure this is in your string/lib code
-extern char* itoa(int val, char* s);
-extern void draw_custom_plane();
-extern int strcmp(const char *s1, const char *s2);
-extern int strncmp(const char *s1, const char *s2, unsigned long n);
-extern char* strcpy(char *dest, const char *src);
-// Hardware helper for polling the keyboard
-static inline unsigned char inb(unsigned short port) {
-    unsigned char val;
-    __asm__ volatile ("inb %1, %0" : "=a"(val) : "Nd"(port));
-    return val;
-}
-
 #define MAX_LINES 100
 #define LINE_SIZE 64
 

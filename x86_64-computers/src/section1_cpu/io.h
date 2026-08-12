@@ -33,7 +33,8 @@ static inline void outw(uint16_t port, uint16_t data) {
 static inline void outl(uint16_t port, uint32_t data) {
     __asm__ volatile ("outl %0, %1" : : "a"(data), "Nd"(port));
 }
-static inline void get_cpu_name(char* name) {
+
+extern inline void get_cpu_name(char* name) {
     unsigned int eax, ebx, ecx, edx;
     uint32_t* ptr = (uint32_t*)name;
 

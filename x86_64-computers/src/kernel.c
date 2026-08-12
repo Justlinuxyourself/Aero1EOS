@@ -1,3 +1,4 @@
+#include "section8_global-header/global.h"
 /* src/kernel.c 
 Copyright (c) 2026 Ali  
 All rights reserved.
@@ -7,62 +8,10 @@ All rights reserved.
 #include "section4_shell/shell.h"
 #include "section6_pci/pci.h"
 #include <stdbool.h>
-typedef unsigned char  uint8_t;
-typedef unsigned short uint16_t;
-typedef unsigned int   uint32_t;  // In 32-bit/64-bit GCC, 'int' is 32 bits
 // typedef unsigned long long uint64_t;
-typedef struct {
-    unsigned short* buffer;
-    int cursor_pos;
-    char command_buffer[80];
-    int buffer_idx;
-} tty_t;
-typedef struct {
-	char task[48];
-	int done;
-	int active;
-} todo_t;
-extern todo_t my_list[10];
-extern unsigned long long timer_ticks;
-extern char kbd_get_char(unsigned char scancode);
-extern void timer_init();
-extern void timer_wait_tick();
-extern void vga_init_ttys();
-extern void vga_draw_status_bar(); 
-extern void vga_clear();
-extern void vga_write(const char* data);
-extern void vga_putchar(char c);
-extern char* itoa(int value, char* str);
-extern unsigned char get_failed_attempts();
-extern void set_failed_attempts(unsigned char count);
-extern void sleep_ms(int ms);
-extern void trigger_ali_morse(); 
-extern void speaker_update();
-extern void startup_melody();
-extern tty_t ttys[];        
-extern int current_tty;     
-extern void play_sound(unsigned int freq);
-extern void vga_set_color(unsigned char color);
-extern void vga_set_attribute(unsigned char attribute);
-extern void sleep();
-extern void init_idt(void);
-extern uint8_t _kernel_start;
-extern uint8_t _kernel_end;
-extern uint64_t stack_top;
-extern void setup_tss(uint64_t kernel_stack);
-extern void load_tss();
-extern void patch_gdt_tss();
-extern void heap_init();
 bool ata_probe(uint16_t port);
-extern void cmos_write_password(const char* encrypted_pass); 
-extern void cmos_read_password(char* dest_buffer); 
 #define CMOS_INIT_FLAG_REG  0x32  // Flag
 #define CMOS_MAGIC_VAL      0xA5  // A distinct byte to signal "Initialized"
-extern unsigned char read_cmos(unsigned char reg);
-extern void write_cmos(unsigned char reg, unsigned char val);
-extern int cmos_get_min();
-extern int cmos_get_hour();
-extern int cmos_get_sec();
 int strcmp_custom(char* s1, char* s2) {
     int i = 0;
     while (s1[i] != '\0' || s2[i] != '\0') {

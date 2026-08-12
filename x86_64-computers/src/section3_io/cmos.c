@@ -1,3 +1,4 @@
+#include "../section8_global-header/global.h"
 /* src/section3_io/cmos.c */
 /* LINKED TO NOTEBOOK: SECTION IV - CMOS & Real-Time Clock */
 /* 

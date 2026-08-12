@@ -1,3 +1,4 @@
+#include "../section8_global-header/global.h"
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -27,10 +28,6 @@ uint16_t ata_base_port = 0x1F0;
 
 #define ATA_TIMEOUT        10000000
 
-static inline void outb(uint16_t port, uint8_t val) { __asm__ volatile ("outb %0, %1" : : "a"(val), "Nd"(port)); }
-static inline uint8_t inb(uint16_t port) { uint8_t ret; __asm__ volatile ("inb %1, %0" : "=a"(ret) : "Nd"(port)); return ret; }
-static inline void outw(uint16_t port, uint16_t val) { __asm__ volatile ("outw %0, %1" : : "a"(val), "Nd"(port)); }
-static inline uint16_t inw(uint16_t port) { uint16_t ret; __asm__ volatile ("inw %1, %0" : "=a"(ret) : "Nd"(port)); return ret; }
 
 static void ata_io_delay(void) {
     for(int i = 0; i < 4; i++) inb(ATA_REG_STATUS);

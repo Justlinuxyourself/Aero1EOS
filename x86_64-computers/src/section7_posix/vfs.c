@@ -1,12 +1,7 @@
+#include "../section8_global-header/global.h"
 
 #include "../section3_io/alifs.h"
 #include <string.h>
-extern void alifs_read_into_buffer();
-extern void vga_write();
-typedef struct {
-    int active;
-    char path[256];
-} file_descriptor_t;
 
 static file_descriptor_t open_files[16];
 

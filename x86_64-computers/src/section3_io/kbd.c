@@ -1,19 +1,10 @@
+#include "../section8_global-header/global.h"
 /* src/section3_io/kbd.c */
 /* LINKED TO NOTEBOOK: SECTION III - Keyboard & Scancodes with TTY Support */
 /* 
 Copyright (c) 2026 Ali  
 All rights reserved.
 */
-// Helper to read from an I/O port
-static inline unsigned char inb(unsigned short port) {
-    unsigned char val;
-    __asm__ volatile ("inb %1, %0" : "=a"(val) : "Nd"(port));
-    return val;
-}
-extern void trigger_ali_morse();
-extern volatile int is_sleeping;
-// External function from vga.c to handle the screen swap
-extern void switch_tty(int n);
 
 // State trackers for modifier keys
 static int ctrl_held = 0;

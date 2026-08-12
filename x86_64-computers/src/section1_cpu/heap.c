@@ -1,3 +1,4 @@
+#include "../section8_global-header/global.h"
 /*
 Copyright (c) 2026 Ali  
 All rights reserved.
@@ -5,7 +6,6 @@ All rights reserved.
 #include "heap.h"
 
 // Pull the '_kernel_end' address from the linker script
-extern char _kernel_end; 
 
 // Start the heap exactly where the kernel finishes
 static block_header_t* free_list_start = (block_header_t*)&_kernel_end;

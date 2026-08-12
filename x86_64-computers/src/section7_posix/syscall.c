@@ -1,3 +1,4 @@
+#include "../section8_global-header/global.h"
 #include "syscall.h"
 
 int vfs_open(char* path);

@@ -1,16 +1,8 @@
+#include "../section8_global-header/global.h"
 #include "alifs.h"
 #include <stdint.h>
 #include <stddef.h>
-extern void ide_write_sector_bytes(uint32_t lba, uint8_t* buffer);
-extern void ide_read_sector_bytes(uint32_t lba, uint8_t* buffer);
-extern int strcmp(const char* s1, const char* s2);
-extern char* strcpy(char* dest, const char* src);
-extern int strlen(const char* s);
-extern int strncmp(const char* s1, const char* s2, int n);
-extern void vga_write(const char* str);
-
-extern char current_path[256]; 
-
+#include <string.h>
 // Static buffer to hold the Inode Table during operations
 static uint8_t inode_sector[512] __attribute__((aligned(8)));
 // Static buffer for reading file content
@@ -216,7 +208,6 @@ int alifs_is_directory(char* name) {
     return 0;
 }
 void alifs_read_into_buffer(char* name, uint8_t* target) {
-    extern uint8_t inode_sector[512];
     ide_read_sector_bytes(ALIFS_START_LBA + 1, inode_sector);
     alifs_inode_t* inodes = (alifs_inode_t*)inode_sector;
 

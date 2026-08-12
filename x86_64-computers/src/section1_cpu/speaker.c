@@ -1,18 +1,14 @@
+#include "../section8_global-header/global.h"
 /* Copyright (c) 2026 Ali  
 All rights reserved.
 */
 #include "io.h"
 
-extern unsigned long long timer_ticks;
 
 // --- Private State for Background Playback ---
 static int current_note_idx = -1;
 static unsigned long long next_event_tick = 0;
 
-typedef struct {
-    int freq;
-    int duration_ms; 
-} Note;
 static Note startup_notes[] = {
     {880, 250}, // High note (A5)
     {0,   30},  // Short gap

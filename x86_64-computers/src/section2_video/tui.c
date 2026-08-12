@@ -1,20 +1,9 @@
+#include "../section8_global-header/global.h"
 /* Copyright (c) 2026 Ali  
 All rights reserved.
 */
 #include "tui_video.h"
 #include "../section1_cpu/io.h"
-extern void vga_draw_status_bar();
-extern void update_hardware_speaker(); // Volume tuner activator
-extern void cmd_neofetch(char* args);
-extern void todo_show();
-extern void cmd_ayah();
-extern void draw_custom_plane();
-extern void shell_lock();
-extern void nosound();
-extern void play_sound();
-extern void vga_write();
-extern void vga_clear();
-extern void wait_for_key();
 int current_selection = 0; // 0-5 for App grid, 6 for Volume Slider
 int is_dragging = 0;       // Keeps focus locked to slider values
 int slider_val = 5;        // Defaults midrange volume state

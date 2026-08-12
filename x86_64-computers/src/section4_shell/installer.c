@@ -1,38 +1,6 @@
+#include "../section8_global-header/global.h"
 #include "grub_payload.h"
 
-/* --- Types --- */
-typedef unsigned char  uint8_t;
-typedef unsigned short uint16_t;
-typedef unsigned int   uint32_t;
-
-/* --- Externs --- */
-extern void vga_write(const char* data);
-extern void vga_putchar(char c);
-extern void vga_set_color(unsigned char color);
-extern void ide_read_sector_bytes(uint32_t lba, uint8_t* buffer);
-extern void ide_write_sector_bytes(uint32_t lba, uint8_t* buffer);
-extern void cmd_disk_wipe();
-/**
- * itoa
- * Converts an integer to a string for display in Aero1EOS.
- */
-static void itoa(uint32_t n, char* s) {
-    uint32_t i = 0, j;
-    char tmp;
-    if (n == 0) s[i++] = '0';
-    while (n > 0) {
-        s[i++] = (n % 10) + '0';
-        n /= 10;
-    }
-    s[i] = '\0';
-    
-    // Reverse the string to get digits in correct order
-    for (j = 0; j < i / 2; j++) {
-        tmp = s[j];
-        s[j] = s[i - j - 1];
-        s[i - j - 1] = tmp;
-    }
-}
 
 void cmd_install_os() {
     vga_set_color(0x0B); // Cyan

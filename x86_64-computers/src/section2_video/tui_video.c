@@ -1,3 +1,4 @@
+#include "../section8_global-header/global.h"
 /* Copyright (c) 2026 Ali  
 All rights reserved.
 */

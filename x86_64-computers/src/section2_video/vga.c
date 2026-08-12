@@ -1,3 +1,4 @@
+#include "../section8_global-header/global.h"
 /* src/section2_video/vga.c */
 /* LINKED TO NOTEBOOK: SECTION II - Enhanced Video & Independent TTYs */
 /* Copyright (c) 2026 Ali  
@@ -12,26 +13,9 @@ unsigned char current_vga_color = NOTEBOOK_YELLOW; // Default color
 #define MAX_TTYS 10
 #define VIDEO_SIZE (WIDTH * HEIGHT * 2)
 int status_bar_enabled = 1; // 1 = Enabled, 0 = Disabled/Hidden
-extern int cmos_get_hour();
-extern int cmos_get_min();
-extern int cmos_get_day();
-extern int cmos_get_month();
-extern int cmos_get_sec();
-extern void update_hardware_cursor();
-extern void vga_draw_status_bar();
 int timezone_offset_seconds = 0; // The "Master" variable
 int kernel_stdout_tty = 0;
 // Independent TTY structure
-typedef struct {
-    unsigned short* buffer;
-    int cursor_pos;
-    char command_buffer[80];
-    int buffer_idx;
-    // New signature: accepts TTY index
-    void (*background_task)(int); 
-    // Add a flag to see if a task is "busy" or can be killed
-    int is_task_running; 
-} tty_t;
 
 
 tty_t ttys[MAX_TTYS];
